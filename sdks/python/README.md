@@ -4,21 +4,21 @@ Python SDK for [Choreo](https://github.com/tosi-n/choreo) - Durable workflow orc
 
 ## Installation
 
-### From PyPI (when published)
+### From GitHub Releases (recommended)
 ```bash
-pip install choreo-sdk
-```
-
-### From GitHub
-```bash
-pip install git+https://github.com/tosi-n/choreo.git#subdirectory=sdks/python
+pip install https://github.com/tosi-n/choreo/releases/download/v0.1.0/choreo_sdk-0.1.0-py3-none-any.whl
 ```
 
 ### From source
 ```bash
+pip install git+https://github.com/tosi-n/choreo.git#subdirectory=sdks/python
+```
+
+### For development
+```bash
 git clone https://github.com/tosi-n/choreo.git
 cd choreo/sdks/python
-pip install -e .
+pip install -e ".[dev]"
 ```
 
 ## Quick Start

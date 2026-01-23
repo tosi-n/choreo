@@ -16,27 +16,36 @@ Durable workflow orchestration built in Rust.
 
 ## Installation
 
-### Rust (Server/Library)
+### Rust Server Binary
 
-**From crates.io (when published):**
+Download pre-built binaries from [GitHub Releases](https://github.com/tosi-n/choreo/releases):
+
 ```bash
-cargo add choreo
+# Linux x86_64
+curl -L https://github.com/tosi-n/choreo/releases/download/v0.1.0/choreo-linux-x86_64.tar.gz | tar xz
+
+# macOS Intel
+curl -L https://github.com/tosi-n/choreo/releases/download/v0.1.0/choreo-macos-x86_64.tar.gz | tar xz
+
+# macOS Apple Silicon
+curl -L https://github.com/tosi-n/choreo/releases/download/v0.1.0/choreo-macos-aarch64.tar.gz | tar xz
 ```
 
-**From GitHub:**
-```toml
-[dependencies]
-choreo = { git = "https://github.com/tosi-n/choreo.git" }
+Or build from source:
+```bash
+git clone https://github.com/tosi-n/choreo.git
+cd choreo
+cargo build --release
 ```
 
 ### Python SDK
 
-**From PyPI (when published):**
+**From GitHub Releases (recommended):**
 ```bash
-pip install choreo-sdk
+pip install https://github.com/tosi-n/choreo/releases/download/v0.1.0/choreo_sdk-0.1.0-py3-none-any.whl
 ```
 
-**From GitHub:**
+**From source:**
 ```bash
 pip install git+https://github.com/tosi-n/choreo.git#subdirectory=sdks/python
 ```
@@ -174,6 +183,24 @@ await step.sleep("id", hours=1)         # Durable sleep
 await step.sleep_until("id", datetime)  # Sleep until timestamp
 await step.send_event("id", "name", {}) # Send event
 ```
+
+## Releases
+
+Releases are published to [GitHub Releases](https://github.com/tosi-n/choreo/releases). Each release includes:
+
+- Pre-built binaries for Linux x86_64, macOS x86_64, and macOS ARM64
+- Python SDK wheel and source distribution
+
+### Creating a Release
+
+Releases are triggered automatically when a version tag is pushed:
+
+```bash
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+The CI workflow builds all artifacts and creates a GitHub Release with auto-generated release notes.
 
 ## License
 
