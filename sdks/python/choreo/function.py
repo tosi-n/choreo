@@ -35,19 +35,20 @@ class FunctionDef:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for API"""
-        result = {
+        triggers: List[Dict[str, Any]] = [{"type": "event", "name": t} for t in self.triggers]
+        if self.cron:
+            triggers.append({"type": "cron", "schedule": self.cron})
+
+        result: Dict[str, Any] = {
             "id": self.id,
             "name": self.name,
-            "triggers": [{"type": "event", "name": t} for t in self.triggers],
+            "triggers": triggers,
             "retries": {
                 "max_attempts": self.retries,
             },
             "timeout_secs": self.timeout,
             "priority": self.priority,
         }
-
-        if self.cron:
-            result["triggers"].append({"type": "cron", "schedule": self.cron})
 
         if self.concurrency:
             result["concurrency"] = {
