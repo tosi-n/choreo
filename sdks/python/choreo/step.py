@@ -16,12 +16,14 @@ T = TypeVar("T")
 
 class StepError(Exception):
     """Error during step execution"""
+
     pass
 
 
 @dataclass
 class StepResult(Generic[T]):
     """Result of a step execution"""
+
     step_id: str
     output: T
     cached: bool = False
@@ -163,6 +165,7 @@ class StepContext:
             step_id: Unique identifier for this sleep step
             until: Datetime to sleep until
         """
+
         async def do_sleep():
             now = datetime.utcnow()
             if until > now:
@@ -192,15 +195,15 @@ class StepContext:
         Returns:
             Event ID
         """
+
         async def do_send():
             if self._client:
-                result = await self._client.send_event(
-                    event_name, data, idempotency_key
-                )
+                result = await self._client.send_event(event_name, data, idempotency_key)
                 return result.get("event_id")
             else:
                 # Mock for local testing
                 import uuid
+
                 return str(uuid.uuid4())
 
         return await self.run(step_id, do_send)

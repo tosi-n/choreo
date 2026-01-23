@@ -31,7 +31,10 @@ pub struct ServerConfig {
 
 impl Default for ServerConfig {
     fn default() -> Self {
-        Self { host: default_host(), port: default_port() }
+        Self {
+            host: default_host(),
+            port: default_port(),
+        }
     }
 }
 
@@ -41,29 +44,46 @@ impl ServerConfig {
     }
 }
 
-fn default_host() -> String { "0.0.0.0".to_string() }
-fn default_port() -> u16 { 8080 }
+fn default_host() -> String {
+    "0.0.0.0".to_string()
+}
+fn default_port() -> u16 {
+    8080
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum DatabaseConfig {
-    Postgres { url: String, #[serde(default = "default_max_conn")] max_connections: u32 },
-    Sqlite { path: String },
+    Postgres {
+        url: String,
+        #[serde(default = "default_max_conn")]
+        max_connections: u32,
+    },
+    Sqlite {
+        path: String,
+    },
 }
 
 impl DatabaseConfig {
     pub fn postgres(url: impl Into<String>) -> Self {
-        Self::Postgres { url: url.into(), max_connections: default_max_conn() }
+        Self::Postgres {
+            url: url.into(),
+            max_connections: default_max_conn(),
+        }
     }
     pub fn sqlite(path: impl Into<String>) -> Self {
         Self::Sqlite { path: path.into() }
     }
     pub fn in_memory() -> Self {
-        Self::Sqlite { path: ":memory:".to_string() }
+        Self::Sqlite {
+            path: ":memory:".to_string(),
+        }
     }
 }
 
-fn default_max_conn() -> u32 { 10 }
+fn default_max_conn() -> u32 {
+    10
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkerConfig {
@@ -97,8 +117,18 @@ impl WorkerConfig {
     }
 }
 
-fn default_worker_id() -> String { format!("worker-{}", uuid::Uuid::now_v7()) }
-fn default_poll_interval() -> u64 { 1000 }
-fn default_batch_size() -> i64 { 10 }
-fn default_lock_duration() -> i64 { 300 }
-fn default_max_concurrent() -> usize { 10 }
+fn default_worker_id() -> String {
+    format!("worker-{}", uuid::Uuid::now_v7())
+}
+fn default_poll_interval() -> u64 {
+    1000
+}
+fn default_batch_size() -> i64 {
+    10
+}
+fn default_lock_duration() -> i64 {
+    300
+}
+fn default_max_concurrent() -> usize {
+    10
+}

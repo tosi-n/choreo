@@ -21,8 +21,10 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 async fn main() -> anyhow::Result<()> {
     // Initialize logging
     tracing_subscriber::registry()
-        .with(tracing_subscriber::EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| "choreo=info,tower_http=debug".into()))
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "choreo=info,tower_http=debug".into()),
+        )
         .with(tracing_subscriber::fmt::layer())
         .init();
 
@@ -41,7 +43,10 @@ async fn main() -> anyhow::Result<()> {
     // Connect to database based on config
     match &config.database {
         #[cfg(feature = "postgres")]
-        DatabaseConfig::Postgres { url, max_connections } => {
+        DatabaseConfig::Postgres {
+            url,
+            max_connections,
+        } => {
             use choreo::PostgresStore;
 
             tracing::info!("Connecting to PostgreSQL...");

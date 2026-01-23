@@ -131,11 +131,9 @@ impl ConcurrencyManager {
     }
 
     /// Acquire a permit for execution
-    pub async fn acquire(
-        &self,
-        key: Option<&str>,
-    ) -> Result<ConcurrencyPermit, ConcurrencyError> {
-        self.acquire_with_timeout(key, self.config.queue_timeout).await
+    pub async fn acquire(&self, key: Option<&str>) -> Result<ConcurrencyPermit, ConcurrencyError> {
+        self.acquire_with_timeout(key, self.config.queue_timeout)
+            .await
     }
 
     /// Acquire a permit with custom timeout

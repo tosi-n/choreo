@@ -51,9 +51,7 @@ impl SqliteStore {
             .await?;
 
         // Enable foreign keys
-        sqlx::query("PRAGMA foreign_keys=ON")
-            .execute(&pool)
-            .await?;
+        sqlx::query("PRAGMA foreign_keys=ON").execute(&pool).await?;
 
         Ok(Self { pool })
     }
@@ -132,12 +130,11 @@ impl StateStore for SqliteStore {
     }
 
     async fn check_idempotency_key(&self, key: &str) -> Result<Option<Uuid>> {
-        let row: Option<String> = sqlx::query_scalar(
-            "SELECT id FROM events WHERE idempotency_key = ? LIMIT 1",
-        )
-        .bind(key)
-        .fetch_optional(&self.pool)
-        .await?;
+        let row: Option<String> =
+            sqlx::query_scalar("SELECT id FROM events WHERE idempotency_key = ? LIMIT 1")
+                .bind(key)
+                .fetch_optional(&self.pool)
+                .await?;
 
         Ok(row.and_then(|s| Uuid::parse_str(&s).ok()))
     }
@@ -164,7 +161,11 @@ impl StateStore for SqliteStore {
         .bind(run.attempt)
         .bind(run.max_attempts)
         .bind(serde_json::to_string(&run.input).unwrap_or_default())
-        .bind(run.output.as_ref().map(|v| serde_json::to_string(v).unwrap_or_default()))
+        .bind(
+            run.output
+                .as_ref()
+                .map(|v| serde_json::to_string(v).unwrap_or_default()),
+        )
         .bind(&run.error)
         .bind(run.created_at.to_rfc3339())
         .bind(run.started_at.map(|t| t.to_rfc3339()))
@@ -348,7 +349,11 @@ impl StateStore for SqliteStore {
 
     async fn fail_run(&self, id: Uuid, error: &str, can_retry: bool) -> Result<()> {
         let status = if can_retry { "queued" } else { "failed" };
-        let ended_at = if can_retry { None } else { Some(Utc::now().to_rfc3339()) };
+        let ended_at = if can_retry {
+            None
+        } else {
+            Some(Utc::now().to_rfc3339())
+        };
 
         sqlx::query(
             r#"
@@ -519,8 +524,16 @@ impl StateStore for SqliteStore {
         .bind(step.run_id.to_string())
         .bind(&step.step_id)
         .bind(step.status.as_str())
-        .bind(step.input.as_ref().map(|v| serde_json::to_string(v).unwrap_or_default()))
-        .bind(step.output.as_ref().map(|v| serde_json::to_string(v).unwrap_or_default()))
+        .bind(
+            step.input
+                .as_ref()
+                .map(|v| serde_json::to_string(v).unwrap_or_default()),
+        )
+        .bind(
+            step.output
+                .as_ref()
+                .map(|v| serde_json::to_string(v).unwrap_or_default()),
+        )
         .bind(&step.error)
         .bind(step.attempt)
         .bind(step.created_at.to_rfc3339())
@@ -623,13 +636,11 @@ impl StateStore for SqliteStore {
     }
 
     async fn release_lock(&self, key: &str, holder: &str) -> Result<bool> {
-        let result = sqlx::query(
-            "DELETE FROM distributed_locks WHERE key = ? AND holder = ?",
-        )
-        .bind(key)
-        .bind(holder)
-        .execute(&self.pool)
-        .await?;
+        let result = sqlx::query("DELETE FROM distributed_locks WHERE key = ? AND holder = ?")
+            .bind(key)
+            .bind(holder)
+            .execute(&self.pool)
+            .await?;
 
         Ok(result.rows_affected() > 0)
     }
@@ -681,7 +692,11 @@ impl StateStore for SqliteStore {
     // Function Registry
     // =========================================================================
 
-    async fn register_function(&self, function_id: &str, definition: &serde_json::Value) -> Result<()> {
+    async fn register_function(
+        &self,
+        function_id: &str,
+        definition: &serde_json::Value,
+    ) -> Result<()> {
         let now = Utc::now().to_rfc3339();
         sqlx::query(
             r#"
@@ -703,24 +718,22 @@ impl StateStore for SqliteStore {
     }
 
     async fn list_functions(&self) -> Result<Vec<serde_json::Value>> {
-        let rows: Vec<String> = sqlx::query_scalar(
-            "SELECT definition FROM functions ORDER BY id"
-        )
-        .fetch_all(&self.pool)
-        .await?;
+        let rows: Vec<String> = sqlx::query_scalar("SELECT definition FROM functions ORDER BY id")
+            .fetch_all(&self.pool)
+            .await?;
 
-        Ok(rows.into_iter()
+        Ok(rows
+            .into_iter()
             .filter_map(|s| serde_json::from_str(&s).ok())
             .collect())
     }
 
     async fn get_function(&self, function_id: &str) -> Result<Option<serde_json::Value>> {
-        let row: Option<String> = sqlx::query_scalar(
-            "SELECT definition FROM functions WHERE id = ?"
-        )
-        .bind(function_id)
-        .fetch_optional(&self.pool)
-        .await?;
+        let row: Option<String> =
+            sqlx::query_scalar("SELECT definition FROM functions WHERE id = ?")
+                .bind(function_id)
+                .fetch_optional(&self.pool)
+                .await?;
 
         Ok(row.and_then(|s| serde_json::from_str(&s).ok()))
     }
@@ -738,13 +751,14 @@ impl StateStore for SqliteStore {
         .await?;
 
         // Filter more precisely in application code
-        Ok(rows.into_iter()
+        Ok(rows
+            .into_iter()
             .filter_map(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
             .filter(|def| {
                 if let Some(triggers) = def.get("triggers").and_then(|t| t.as_array()) {
                     triggers.iter().any(|t| {
-                        t.get("type").and_then(|t| t.as_str()) == Some("event") &&
-                        t.get("name").and_then(|n| n.as_str()) == Some(event_name)
+                        t.get("type").and_then(|t| t.as_str()) == Some("event")
+                            && t.get("name").and_then(|n| n.as_str()) == Some(event_name)
                     })
                 } else {
                     false
@@ -789,9 +803,7 @@ impl StateStore for SqliteStore {
     // =========================================================================
 
     async fn ping(&self) -> Result<()> {
-        sqlx::query("SELECT 1")
-            .execute(&self.pool)
-            .await?;
+        sqlx::query("SELECT 1").execute(&self.pool).await?;
         Ok(())
     }
 
@@ -799,7 +811,9 @@ impl StateStore for SqliteStore {
         sqlx::migrate!("./migrations/sqlite")
             .run(&self.pool)
             .await
-            .map_err(|e| ChoreoError::Database(crate::error::DatabaseError::Migration(e.to_string())))?;
+            .map_err(|e| {
+                ChoreoError::Database(crate::error::DatabaseError::Migration(e.to_string()))
+            })?;
         Ok(())
     }
 

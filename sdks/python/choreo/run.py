@@ -11,6 +11,7 @@ from uuid import UUID
 
 class RunStatus(Enum):
     """Status of a function run"""
+
     QUEUED = "queued"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -26,6 +27,7 @@ class RunStatus(Enum):
 @dataclass
 class FunctionRun:
     """A function run instance"""
+
     id: UUID
     function_id: str
     event_id: UUID
@@ -45,7 +47,9 @@ class FunctionRun:
         return cls(
             id=UUID(data["id"]) if isinstance(data["id"], str) else data["id"],
             function_id=data["function_id"],
-            event_id=UUID(data["event_id"]) if isinstance(data["event_id"], str) else data["event_id"],
+            event_id=(
+                UUID(data["event_id"]) if isinstance(data["event_id"], str) else data["event_id"]
+            ),
             status=RunStatus(data["status"]),
             attempt=data["attempt"],
             max_attempts=data["max_attempts"],

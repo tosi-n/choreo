@@ -153,7 +153,11 @@ impl<S: StateStore + Clone> StepContext<S> {
             Ok(result) => result,
             Err(_) => {
                 self.store
-                    .fail_step(self.run_id, step_id, &format!("Timeout after {:?}", timeout))
+                    .fail_step(
+                        self.run_id,
+                        step_id,
+                        &format!("Timeout after {:?}", timeout),
+                    )
                     .await?;
                 Err(StepError::Timeout(timeout))
             }

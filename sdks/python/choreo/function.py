@@ -9,6 +9,7 @@ from typing import Any, Callable, Dict, List, Optional
 @dataclass
 class TriggerDef:
     """Trigger definition"""
+
     type: str  # "event" or "cron"
     event_name: Optional[str] = None
     cron_schedule: Optional[str] = None
@@ -18,6 +19,7 @@ class TriggerDef:
 @dataclass
 class FunctionDef:
     """Function definition with metadata"""
+
     id: str
     name: str = ""
     triggers: List[str] = field(default_factory=list)
@@ -36,9 +38,7 @@ class FunctionDef:
         result = {
             "id": self.id,
             "name": self.name,
-            "triggers": [
-                {"type": "event", "name": t} for t in self.triggers
-            ],
+            "triggers": [{"type": "event", "name": t} for t in self.triggers],
             "retries": {
                 "max_attempts": self.retries,
             },

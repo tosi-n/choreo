@@ -348,8 +348,8 @@ mod tests {
 
     #[test]
     fn test_function_run_retry_logic() {
-        let mut run = FunctionRun::new("test", Uuid::now_v7(), serde_json::json!({}))
-            .with_max_attempts(3);
+        let mut run =
+            FunctionRun::new("test", Uuid::now_v7(), serde_json::json!({})).with_max_attempts(3);
 
         assert!(run.can_retry());
 

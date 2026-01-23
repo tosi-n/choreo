@@ -136,7 +136,11 @@ impl<S: StateStore + Clone + 'static> Executor<S> {
         // Lease runs
         let runs = self
             .store
-            .lease_runs(&self.config.worker_id, batch_size, self.config.lock_duration_secs)
+            .lease_runs(
+                &self.config.worker_id,
+                batch_size,
+                self.config.lock_duration_secs,
+            )
             .await?;
 
         if runs.is_empty() {
@@ -147,7 +151,12 @@ impl<S: StateStore + Clone + 'static> Executor<S> {
 
         // Spawn execution tasks
         for run in runs {
-            let permit = self.concurrency_semaphore.clone().acquire_owned().await.unwrap();
+            let permit = self
+                .concurrency_semaphore
+                .clone()
+                .acquire_owned()
+                .await
+                .unwrap();
             let store = self.store.clone();
             let registry = self.registry.clone();
             let config = self.config.clone();
@@ -157,7 +166,10 @@ impl<S: StateStore + Clone + 'static> Executor<S> {
                 let run_id = run.id;
                 let span = tracing::info_span!("execute_run", run_id = %run_id);
 
-                if let Err(e) = execute_run(store, registry, config, run).instrument(span).await {
+                if let Err(e) = execute_run(store, registry, config, run)
+                    .instrument(span)
+                    .await
+                {
                     error!(run_id = %run_id, error = %e, "Run execution failed");
                 }
             });

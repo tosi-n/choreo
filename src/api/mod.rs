@@ -67,7 +67,9 @@ pub struct PaginationQuery {
     pub offset: i64,
 }
 
-fn default_limit() -> i64 { 50 }
+fn default_limit() -> i64 {
+    50
+}
 
 #[derive(Debug, Deserialize)]
 pub struct LeaseRunsRequest {
@@ -78,8 +80,12 @@ pub struct LeaseRunsRequest {
     pub lease_duration_secs: i64,
 }
 
-fn default_lease_limit() -> i64 { 10 }
-fn default_lease_duration() -> i64 { 300 }
+fn default_lease_limit() -> i64 {
+    10
+}
+fn default_lease_duration() -> i64 {
+    300
+}
 
 #[derive(Debug, Serialize)]
 pub struct LeaseRunsResponse {
@@ -166,8 +172,8 @@ pub struct FunctionDefRequest {
 pub struct TriggerDefRequest {
     #[serde(rename = "type")]
     pub trigger_type: String,
-    pub name: Option<String>,  // for event triggers
-    pub schedule: Option<String>,  // for cron triggers
+    pub name: Option<String>,     // for event triggers
+    pub schedule: Option<String>, // for cron triggers
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -300,7 +306,10 @@ async fn get_event<S: StateStore>(
     State(state): State<Arc<AppState<S>>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Event>, AppError> {
-    let event = state.store.get_event(id).await?
+    let event = state
+        .store
+        .get_event(id)
+        .await?
         .ok_or(ChoreoError::EventNotFound { id })?;
     Ok(Json(event))
 }
@@ -309,7 +318,10 @@ async fn get_run<S: StateStore>(
     State(state): State<Arc<AppState<S>>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<RunResponse>, AppError> {
-    let run = state.store.get_run(id).await?
+    let run = state
+        .store
+        .get_run(id)
+        .await?
         .ok_or(ChoreoError::RunNotFound { id })?;
     Ok(Json(run.into()))
 }
@@ -319,7 +331,10 @@ async fn cancel_run<S: StateStore>(
     Path(id): Path<Uuid>,
 ) -> Result<Json<RunResponse>, AppError> {
     state.store.cancel_run(id).await?;
-    let run = state.store.get_run(id).await?
+    let run = state
+        .store
+        .get_run(id)
+        .await?
         .ok_or(ChoreoError::RunNotFound { id })?;
     Ok(Json(run.into()))
 }
@@ -350,12 +365,18 @@ async fn lease_runs<S: StateStore>(
     State(state): State<Arc<AppState<S>>>,
     Json(req): Json<LeaseRunsRequest>,
 ) -> Result<Json<LeaseRunsResponse>, AppError> {
-    let runs = state.store.lease_runs(&req.worker_id, req.limit, req.lease_duration_secs).await?;
+    let runs = state
+        .store
+        .lease_runs(&req.worker_id, req.limit, req.lease_duration_secs)
+        .await?;
 
     let mut leased_runs = Vec::with_capacity(runs.len());
     for run in runs {
         // Get the event for this run
-        let event = state.store.get_event(run.event_id).await?
+        let event = state
+            .store
+            .get_event(run.event_id)
+            .await?
             .ok_or(ChoreoError::EventNotFound { id: run.event_id })?;
 
         // Get cached steps for replay
@@ -382,7 +403,10 @@ async fn complete_run<S: StateStore>(
     Json(req): Json<CompleteRunRequest>,
 ) -> Result<Json<RunResponse>, AppError> {
     state.store.complete_run(id, req.output).await?;
-    let run = state.store.get_run(id).await?
+    let run = state
+        .store
+        .get_run(id)
+        .await?
         .ok_or(ChoreoError::RunNotFound { id })?;
     Ok(Json(run.into()))
 }
@@ -392,8 +416,14 @@ async fn fail_run<S: StateStore>(
     Path(id): Path<Uuid>,
     Json(req): Json<FailRunRequest>,
 ) -> Result<Json<RunResponse>, AppError> {
-    state.store.fail_run(id, &req.error, req.should_retry).await?;
-    let run = state.store.get_run(id).await?
+    state
+        .store
+        .fail_run(id, &req.error, req.should_retry)
+        .await?;
+    let run = state
+        .store
+        .get_run(id)
+        .await?
         .ok_or(ChoreoError::RunNotFound { id })?;
     Ok(Json(run.into()))
 }
@@ -403,11 +433,15 @@ async fn save_step<S: StateStore>(
     Path((run_id, step_id)): Path<(Uuid, String)>,
     Json(req): Json<SaveStepRequest>,
 ) -> Result<Json<StepResponse>, AppError> {
-    state.store.complete_step(run_id, &step_id, req.output).await?;
+    state
+        .store
+        .complete_step(run_id, &step_id, req.output)
+        .await?;
 
     // Get the updated step
     let steps = state.store.get_steps_for_run(run_id).await?;
-    let step = steps.into_iter()
+    let step = steps
+        .into_iter()
         .find(|s| s.step_id == step_id)
         .ok_or(ChoreoError::StepNotFound { run_id, step_id })?;
 
@@ -418,7 +452,10 @@ async fn worker_heartbeat<S: StateStore>(
     State(state): State<Arc<AppState<S>>>,
     Json(req): Json<WorkerHeartbeatRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    state.store.extend_run_leases(&req.worker_id, &req.run_ids).await?;
+    state
+        .store
+        .extend_run_leases(&req.worker_id, &req.run_ids)
+        .await?;
     Ok(Json(serde_json::json!({ "status": "ok" })))
 }
 
@@ -428,7 +465,10 @@ async fn register_functions<S: StateStore>(
 ) -> Result<Json<serde_json::Value>, AppError> {
     let count = req.functions.len();
     for func in req.functions {
-        state.store.register_function(&func.id, &serde_json::to_value(&func)?).await?;
+        state
+            .store
+            .register_function(&func.id, &serde_json::to_value(&func)?)
+            .await?;
     }
     Ok(Json(serde_json::json!({ "registered": count })))
 }
@@ -468,7 +508,10 @@ impl IntoResponse for AppError {
             ChoreoError::InvalidStateTransition { .. } => {
                 (StatusCode::BAD_REQUEST, self.0.to_string())
             }
-            _ => (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error".to_string()),
+            _ => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal server error".to_string(),
+            ),
         };
 
         let body = serde_json::json!({ "error": message });

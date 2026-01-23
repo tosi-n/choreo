@@ -6,11 +6,11 @@
 //! - Queue depths and wait times
 //! - Concurrency utilization
 
+use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use parking_lot::RwLock;
 
 /// Metrics registry
 pub struct MetricsRegistry {
@@ -112,7 +112,10 @@ impl MetricsRegistry {
             for (le, count) in &snapshot.buckets {
                 output.push_str(&format!("{}_bucket{{le=\"{}\"}} {}\n", name, le, count));
             }
-            output.push_str(&format!("{}_bucket{{le=\"+Inf\"}} {}\n", name, snapshot.count));
+            output.push_str(&format!(
+                "{}_bucket{{le=\"+Inf\"}} {}\n",
+                name, snapshot.count
+            ));
         }
 
         output
@@ -154,7 +157,10 @@ impl MetricsRegistry {
                 }),
             );
         }
-        metrics.insert("histograms".to_string(), serde_json::Value::Object(histograms));
+        metrics.insert(
+            "histograms".to_string(),
+            serde_json::Value::Object(histograms),
+        );
 
         serde_json::Value::Object(metrics)
     }
@@ -241,7 +247,9 @@ impl Histogram {
             values: RwLock::new(Vec::new()),
             count: AtomicU64::new(0),
             sum: RwLock::new(0.0),
-            buckets: vec![0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0],
+            buckets: vec![
+                0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0,
+            ],
         }
     }
 
@@ -289,11 +297,7 @@ impl Histogram {
                 sum: 0.0,
                 min: 0.0,
                 max: 0.0,
-                buckets: self
-                    .buckets
-                    .iter()
-                    .map(|b| (*b, 0))
-                    .collect(),
+                buckets: self.buckets.iter().map(|b| (*b, 0)).collect(),
                 values: vec![],
             };
         }

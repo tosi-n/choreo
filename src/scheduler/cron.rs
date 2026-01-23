@@ -78,12 +78,7 @@ impl<S: StateStore + Clone + 'static> CronScheduler<S> {
     }
 
     /// Check if a cron job should trigger now
-    async fn should_trigger(
-        &self,
-        schedule: &str,
-        function_id: &str,
-        now: DateTime<Utc>,
-    ) -> bool {
+    async fn should_trigger(&self, schedule: &str, function_id: &str, now: DateTime<Utc>) -> bool {
         // Parse cron expression
         let cron = match parse_cron(schedule) {
             Ok(c) => c,
@@ -169,11 +164,20 @@ enum CronField {
 
 impl CronExpr {
     fn matches(&self, dt: DateTime<Utc>) -> bool {
-        self.minute.matches(dt.format("%M").to_string().parse().unwrap_or(0))
-            && self.hour.matches(dt.format("%H").to_string().parse().unwrap_or(0))
-            && self.day.matches(dt.format("%d").to_string().parse().unwrap_or(1))
-            && self.month.matches(dt.format("%m").to_string().parse().unwrap_or(1))
-            && self.weekday.matches(dt.format("%u").to_string().parse().unwrap_or(1))
+        self.minute
+            .matches(dt.format("%M").to_string().parse().unwrap_or(0))
+            && self
+                .hour
+                .matches(dt.format("%H").to_string().parse().unwrap_or(0))
+            && self
+                .day
+                .matches(dt.format("%d").to_string().parse().unwrap_or(1))
+            && self
+                .month
+                .matches(dt.format("%m").to_string().parse().unwrap_or(1))
+            && self
+                .weekday
+                .matches(dt.format("%u").to_string().parse().unwrap_or(1))
     }
 
     fn next_after(&self, after: DateTime<Utc>) -> Option<DateTime<Utc>> {

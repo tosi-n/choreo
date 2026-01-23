@@ -12,9 +12,9 @@ mod priority;
 mod throttle;
 
 pub use cron::CronScheduler;
-pub use debounce::{Debouncer, DebounceConfig};
-pub use priority::{PriorityQueue, PriorityItem};
-pub use throttle::{Throttler, ThrottleConfig};
+pub use debounce::{DebounceConfig, Debouncer};
+pub use priority::{PriorityItem, PriorityQueue};
+pub use throttle::{ThrottleConfig, Throttler};
 
 use std::sync::Arc;
 use tokio::sync::broadcast;
@@ -72,18 +72,14 @@ impl<S: StateStore + Clone + 'static> Scheduler<S> {
 
     /// Register a throttler for a function
     pub fn register_throttle(&self, function_id: &str, config: ThrottleConfig) {
-        self.throttlers.insert(
-            function_id.to_string(),
-            Throttler::new(config),
-        );
+        self.throttlers
+            .insert(function_id.to_string(), Throttler::new(config));
     }
 
     /// Register a debouncer for a function
     pub fn register_debounce(&self, function_id: &str, config: DebounceConfig) {
-        self.debouncers.insert(
-            function_id.to_string(),
-            Debouncer::new(config),
-        );
+        self.debouncers
+            .insert(function_id.to_string(), Debouncer::new(config));
     }
 
     /// Check if execution is allowed by throttle

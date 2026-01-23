@@ -585,13 +585,11 @@ impl StateStore for PostgresStore {
     }
 
     async fn release_lock(&self, key: &str, holder: &str) -> Result<bool> {
-        let result = sqlx::query(
-            "DELETE FROM distributed_locks WHERE key = $1 AND holder = $2",
-        )
-        .bind(key)
-        .bind(holder)
-        .execute(&self.pool)
-        .await?;
+        let result = sqlx::query("DELETE FROM distributed_locks WHERE key = $1 AND holder = $2")
+            .bind(key)
+            .bind(holder)
+            .execute(&self.pool)
+            .await?;
 
         Ok(result.rows_affected() > 0)
     }
@@ -633,7 +631,11 @@ impl StateStore for PostgresStore {
     // Function Registry
     // =========================================================================
 
-    async fn register_function(&self, function_id: &str, definition: &serde_json::Value) -> Result<()> {
+    async fn register_function(
+        &self,
+        function_id: &str,
+        definition: &serde_json::Value,
+    ) -> Result<()> {
         sqlx::query(
             r#"
             INSERT INTO functions (id, definition, created_at, updated_at)
@@ -653,7 +655,7 @@ impl StateStore for PostgresStore {
 
     async fn list_functions(&self) -> Result<Vec<serde_json::Value>> {
         let rows = sqlx::query_scalar::<_, serde_json::Value>(
-            "SELECT definition FROM functions ORDER BY id"
+            "SELECT definition FROM functions ORDER BY id",
         )
         .fetch_all(&self.pool)
         .await?;
@@ -663,7 +665,7 @@ impl StateStore for PostgresStore {
 
     async fn get_function(&self, function_id: &str) -> Result<Option<serde_json::Value>> {
         let row = sqlx::query_scalar::<_, serde_json::Value>(
-            "SELECT definition FROM functions WHERE id = $1"
+            "SELECT definition FROM functions WHERE id = $1",
         )
         .bind(function_id)
         .fetch_optional(&self.pool)
@@ -716,9 +718,7 @@ impl StateStore for PostgresStore {
     // =========================================================================
 
     async fn ping(&self) -> Result<()> {
-        sqlx::query("SELECT 1")
-            .execute(&self.pool)
-            .await?;
+        sqlx::query("SELECT 1").execute(&self.pool).await?;
         Ok(())
     }
 
@@ -726,7 +726,9 @@ impl StateStore for PostgresStore {
         sqlx::migrate!("./migrations/postgres")
             .run(&self.pool)
             .await
-            .map_err(|e| ChoreoError::Database(crate::error::DatabaseError::Migration(e.to_string())))?;
+            .map_err(|e| {
+                ChoreoError::Database(crate::error::DatabaseError::Migration(e.to_string()))
+            })?;
         Ok(())
     }
 

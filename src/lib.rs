@@ -59,15 +59,17 @@ pub mod scheduler;
 pub mod storage;
 
 // Re-exports for convenience
-pub use config::{Config, DatabaseConfig, WorkerConfig};
 pub use concurrency::{ConcurrencyConfig, ConcurrencyManager, ConcurrencyPermit};
+pub use config::{Config, DatabaseConfig, WorkerConfig};
 pub use error::{ChoreoError, Result};
 pub use executor::{Executor, ExecutorConfig, StepContext, StepError};
 pub use metrics::{ChoreoMetrics, MetricsRegistry};
 pub use middleware::{Middleware, MiddlewareChain, MiddlewareContext, MiddlewareResult};
 pub use models::{Event, FunctionRun, RetryConfig, RunStatus, StepRun, StepStatus};
 pub use registry::{FunctionDef, FunctionHandler, Registry, TriggerDef};
-pub use scheduler::{CronScheduler, DebounceConfig, Debouncer, PriorityQueue, Scheduler, ThrottleConfig, Throttler};
+pub use scheduler::{
+    CronScheduler, DebounceConfig, Debouncer, PriorityQueue, Scheduler, ThrottleConfig, Throttler,
+};
 pub use storage::StateStore;
 
 #[cfg(feature = "postgres")]
@@ -79,9 +81,9 @@ pub use storage::sqlite::SqliteStore;
 /// Prelude for common imports
 pub mod prelude {
     pub use crate::{
-        ChoreoError, Config, ConcurrencyManager, Event, Executor, ExecutorConfig,
-        FunctionDef, FunctionRun, Registry, Result, RunStatus, Scheduler, StateStore,
-        StepContext, StepError, StepRun, StepStatus, TriggerDef,
+        ChoreoError, ConcurrencyManager, Config, Event, Executor, ExecutorConfig, FunctionDef,
+        FunctionRun, Registry, Result, RunStatus, Scheduler, StateStore, StepContext, StepError,
+        StepRun, StepStatus, TriggerDef,
     };
 
     #[cfg(feature = "postgres")]

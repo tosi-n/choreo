@@ -32,7 +32,10 @@ pub trait FunctionHandler<S: StateStore>: Send + Sync {
 pub struct AsyncFnHandler<S, F>
 where
     S: StateStore,
-    F: Fn(FunctionRun, StepContext<S>) -> Pin<Box<dyn Future<Output = Result<serde_json::Value, StepError>> + Send>>
+    F: Fn(
+            FunctionRun,
+            StepContext<S>,
+        ) -> Pin<Box<dyn Future<Output = Result<serde_json::Value, StepError>> + Send>>
         + Send
         + Sync,
 {
@@ -43,7 +46,10 @@ where
 impl<S, F> AsyncFnHandler<S, F>
 where
     S: StateStore,
-    F: Fn(FunctionRun, StepContext<S>) -> Pin<Box<dyn Future<Output = Result<serde_json::Value, StepError>> + Send>>
+    F: Fn(
+            FunctionRun,
+            StepContext<S>,
+        ) -> Pin<Box<dyn Future<Output = Result<serde_json::Value, StepError>> + Send>>
         + Send
         + Sync,
 {
@@ -59,7 +65,10 @@ where
 impl<S, F> FunctionHandler<S> for AsyncFnHandler<S, F>
 where
     S: StateStore + 'static,
-    F: Fn(FunctionRun, StepContext<S>) -> Pin<Box<dyn Future<Output = Result<serde_json::Value, StepError>> + Send>>
+    F: Fn(
+            FunctionRun,
+            StepContext<S>,
+        ) -> Pin<Box<dyn Future<Output = Result<serde_json::Value, StepError>> + Send>>
         + Send
         + Sync,
 {
@@ -247,11 +256,7 @@ impl<S: StateStore + 'static> Registry<S> {
     }
 
     /// Register a function with its handler
-    pub fn register<H: FunctionHandler<S> + 'static>(
-        &self,
-        def: FunctionDef,
-        handler: H,
-    ) -> &Self {
+    pub fn register<H: FunctionHandler<S> + 'static>(&self, def: FunctionDef, handler: H) -> &Self {
         let function_id = def.id.clone();
 
         // Store definition
@@ -280,13 +285,13 @@ impl<S: StateStore + 'static> Registry<S> {
     }
 
     /// Register a function using a closure
-    pub fn register_fn<F>(
-        &self,
-        def: FunctionDef,
-        func: F,
-    ) -> &Self
+    pub fn register_fn<F>(&self, def: FunctionDef, func: F) -> &Self
     where
-        F: Fn(FunctionRun, StepContext<S>) -> Pin<Box<dyn Future<Output = Result<serde_json::Value, StepError>> + Send>>
+        F: Fn(
+                FunctionRun,
+                StepContext<S>,
+            )
+                -> Pin<Box<dyn Future<Output = Result<serde_json::Value, StepError>> + Send>>
             + Send
             + Sync
             + 'static,
@@ -356,9 +361,7 @@ fn matches_event_pattern(pattern: &str, event_name: &str) -> bool {
 
     // Handle wildcard patterns like "user.*" or "*.created"
     if pattern.contains('*') {
-        let regex_pattern = pattern
-            .replace('.', "\\.")
-            .replace('*', ".*");
+        let regex_pattern = pattern.replace('.', "\\.").replace('*', ".*");
 
         if let Ok(re) = regex_lite::Regex::new(&format!("^{}$", regex_pattern)) {
             return re.is_match(event_name);

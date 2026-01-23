@@ -153,12 +153,7 @@ pub trait StateStore: Send + Sync + 'static {
     /// Try to acquire a distributed lock
     ///
     /// Returns true if lock was acquired, false if already held by another
-    async fn try_acquire_lock(
-        &self,
-        key: &str,
-        holder: &str,
-        ttl_secs: i64,
-    ) -> Result<bool>;
+    async fn try_acquire_lock(&self, key: &str, holder: &str, ttl_secs: i64) -> Result<bool>;
 
     /// Release a distributed lock
     ///
@@ -178,7 +173,11 @@ pub trait StateStore: Send + Sync + 'static {
     // =========================================================================
 
     /// Register a function definition
-    async fn register_function(&self, function_id: &str, definition: &serde_json::Value) -> Result<()>;
+    async fn register_function(
+        &self,
+        function_id: &str,
+        definition: &serde_json::Value,
+    ) -> Result<()>;
 
     /// List all registered functions
     async fn list_functions(&self) -> Result<Vec<serde_json::Value>>;
@@ -194,11 +193,7 @@ pub trait StateStore: Send + Sync + 'static {
     // =========================================================================
 
     /// Extend leases on multiple runs for a worker (heartbeat)
-    async fn extend_run_leases(
-        &self,
-        worker_id: &str,
-        run_ids: &[Uuid],
-    ) -> Result<()>;
+    async fn extend_run_leases(&self, worker_id: &str, run_ids: &[Uuid]) -> Result<()>;
 
     // =========================================================================
     // Maintenance
@@ -235,7 +230,11 @@ pub trait StateStoreExt: StateStore {
     }
 
     /// Get step output if completed, for durable execution replay
-    async fn get_step_output(&self, run_id: Uuid, step_id: &str) -> Result<Option<serde_json::Value>> {
+    async fn get_step_output(
+        &self,
+        run_id: Uuid,
+        step_id: &str,
+    ) -> Result<Option<serde_json::Value>> {
         if let Some(step) = self.get_step(run_id, step_id).await? {
             if step.status == StepStatus::Completed {
                 return Ok(step.output);
