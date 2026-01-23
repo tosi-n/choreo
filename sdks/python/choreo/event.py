@@ -2,7 +2,7 @@
 Event model
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, Optional
 from uuid import UUID
@@ -11,6 +11,7 @@ from uuid import UUID
 @dataclass
 class Event:
     """An event that triggers function runs"""
+
     id: UUID
     name: str
     data: Dict[str, Any]
@@ -32,7 +33,7 @@ class Event:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
-        result = {
+        result: Dict[str, Any] = {
             "id": str(self.id),
             "name": self.name,
             "data": self.data,
@@ -48,6 +49,7 @@ class Event:
 @dataclass
 class EventContext:
     """Context passed to function handlers"""
+
     event: Event
     run_id: UUID
     attempt: int

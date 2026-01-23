@@ -1,6 +1,6 @@
 # Choreo
 
-Durable workflow orchestration built in Rust. An open-source alternative to Inngest.
+Durable workflow orchestration built in Rust.
 
 ## Features
 
@@ -174,21 +174,6 @@ await step.sleep("id", hours=1)         # Durable sleep
 await step.sleep_until("id", datetime)  # Sleep until timestamp
 await step.send_event("id", "name", {}) # Send event
 ```
-
-## Feature Comparison with Inngest
-
-| Feature | Choreo | Inngest |
-|---------|--------|---------|
-| Durable execution | Yes | Yes |
-| Event triggers | Yes | Yes |
-| Cron scheduling | Yes | Yes |
-| Step functions | Yes | Yes |
-| Concurrency control | Yes | Yes |
-| Throttling | Yes | Yes |
-| Debouncing | Yes | Yes |
-| Priority queues | Yes | Limited |
-| Self-hosted | Yes | Yes |
-| Open source | Yes | Partial |
 
 ## License
 

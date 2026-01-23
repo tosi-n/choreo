@@ -3,7 +3,7 @@ Function definitions and registry
 """
 
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional
 
 
 @dataclass

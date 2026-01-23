@@ -1,8 +1,8 @@
 """
-Choreo - Durable workflow orchestration with BYO database
+Choreo - Durable workflow orchestration
 
 Usage:
-    from choreo import Choreo, step
+    from choreo import Choreo
 
     choreo = Choreo("http://localhost:8080")
 
@@ -17,10 +17,10 @@ Usage:
 """
 
 from .client import Choreo, ChoreoClient
-from .function import function, FunctionDef, TriggerDef
-from .step import StepContext, StepError
 from .event import Event, EventContext
+from .function import FunctionDef, TriggerDef, function
 from .run import FunctionRun, RunStatus
+from .step import StepContext, StepError
 
 __version__ = "0.1.0"
 __all__ = [

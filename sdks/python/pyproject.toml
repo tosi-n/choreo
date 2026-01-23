@@ -12,7 +12,7 @@ requires-python = ">=3.9"
 authors = [
     { name = "tosi-n" },
 ]
-keywords = ["workflow", "orchestration", "durable", "async", "tasks", "inngest"]
+keywords = ["workflow", "orchestration", "durable", "async", "tasks"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -54,5 +54,7 @@ target-version = ["py39"]
 
 [tool.ruff]
 line-length = 100
+
+[tool.ruff.lint]
 select = ["E", "F", "I", "N", "W"]
 ignore = ["E501"]

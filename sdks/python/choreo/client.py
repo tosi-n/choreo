@@ -1,20 +1,20 @@
 """
-Choreo client - connects to Choreo server or embeds directly
+Choreo client - connects to Choreo server
 """
 
 import asyncio
 import logging
-from dataclasses import dataclass, field
+import uuid as uuid_module
+from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Union
 from uuid import UUID
+
 import httpx
 
 from .event import Event, EventContext
 from .function import FunctionDef, FunctionRegistry
-from .run import FunctionRun, RunStatus
+from .run import FunctionRun
 from .step import StepContext
-
-import uuid as uuid_module
 
 logger = logging.getLogger(__name__)
 
@@ -22,16 +22,12 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ChoreoConfig:
     """Configuration for Choreo client"""
-    # Server URL (if using remote mode)
+
     server_url: Optional[str] = None
-    # Database URL (if using embedded mode)
-    database_url: Optional[str] = None
-    # Worker configuration
     worker_id: Optional[str] = None
     poll_interval: float = 1.0
     batch_size: int = 10
     max_concurrent: int = 10
-    # HTTP client timeout
     timeout: float = 30.0
 
 
@@ -68,7 +64,7 @@ class ChoreoClient:
         user_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Send an event to trigger functions"""
-        payload = {
+        payload: Dict[str, Any] = {
             "name": name,
             "data": data,
         }
@@ -221,13 +217,9 @@ class Choreo:
     def __init__(
         self,
         server_url: Optional[str] = None,
-        database_url: Optional[str] = None,
         config: Optional[ChoreoConfig] = None,
     ):
-        self.config = config or ChoreoConfig(
-            server_url=server_url,
-            database_url=database_url,
-        )
+        self.config = config or ChoreoConfig(server_url=server_url)
         self.registry = FunctionRegistry()
         self._client: Optional[ChoreoClient] = None
         self._shutdown = asyncio.Event()
@@ -247,7 +239,7 @@ class Choreo:
         throttle_limit: Optional[int] = None,
         throttle_period: Optional[int] = None,
         debounce_period: Optional[int] = None,
-    ):
+    ) -> Callable:
         """
         Decorator to register a function with Choreo.
 
@@ -259,19 +251,19 @@ class Choreo:
             retries: Maximum retry attempts (default: 3)
             timeout: Execution timeout in seconds (default: 300)
             concurrency: Maximum concurrent executions
-            concurrency_key: Expression for per-key concurrency (e.g., "event.data.user_id")
+            concurrency_key: Expression for per-key concurrency
             priority: Execution priority (higher = processed first)
             throttle_limit: Maximum executions per throttle_period
             throttle_period: Throttle period in seconds
             debounce_period: Debounce period in seconds
         """
-        all_triggers = []
+        all_triggers: List[str] = []
         if trigger:
             all_triggers.append(trigger)
         if triggers:
             all_triggers.extend(triggers)
 
-        def decorator(func: Callable):
+        def decorator(func: Callable) -> Callable:
             func_def = FunctionDef(
                 id=function_id,
                 name=func.__name__,
@@ -318,7 +310,7 @@ class Choreo:
             raise RuntimeError("Server URL not configured")
         return ChoreoClient(self.config.server_url, self.config.timeout)
 
-    async def start_worker(self):
+    async def start_worker(self) -> None:
         """
         Start a worker to process function runs.
 
@@ -417,7 +409,9 @@ class Choreo:
         )
 
         # Execute the handler
-        logger.info(f"Executing function {function_id} (run: {run_id}, attempt: {run_data['attempt']})")
+        logger.info(
+            f"Executing function {function_id} (run: {run_id}, attempt: {run_data['attempt']})"
+        )
 
         if asyncio.iscoroutinefunction(handler):
             result = await handler(ctx, step)
@@ -434,8 +428,6 @@ class Choreo:
         while True:
             try:
                 await asyncio.sleep(60)  # Heartbeat every minute
-                # Note: In a full implementation, we'd track active runs
-                # and extend their leases here
             except asyncio.CancelledError:
                 break
 
@@ -451,6 +443,6 @@ class Choreo:
             result = await client.register_functions(function_defs)
             logger.info(f"Registered {result.get('registered', 0)} functions")
 
-    def shutdown(self):
+    def shutdown(self) -> None:
         """Signal the worker to stop"""
         self._shutdown.set()
