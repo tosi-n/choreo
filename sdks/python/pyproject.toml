@@ -3,16 +3,16 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "choreo"
+name = "choreo-sdk"
 version = "0.1.0"
-description = "Durable workflow orchestration with BYO database"
+description = "Python SDK for Choreo - Durable workflow orchestration"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.9"
 authors = [
-    { name = "Your Name", email = "you@example.com" },
+    { name = "tosi-n" },
 ]
-keywords = ["workflow", "orchestration", "durable", "async", "tasks"]
+keywords = ["workflow", "orchestration", "durable", "async", "tasks", "inngest"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -23,6 +23,8 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Software Development :: Libraries :: Python Modules",
+    "Framework :: AsyncIO",
+    "Typing :: Typed",
 ]
 dependencies = [
     "httpx>=0.25.0",
@@ -34,12 +36,14 @@ dev = [
     "pytest-asyncio>=0.21",
     "black>=23.0",
     "ruff>=0.1",
+    "mypy>=1.0",
 ]
 
 [project.urls]
-Homepage = "https://github.com/your-org/choreo"
-Documentation = "https://github.com/your-org/choreo#readme"
-Repository = "https://github.com/your-org/choreo"
+Homepage = "https://github.com/tosi-n/choreo"
+Documentation = "https://github.com/tosi-n/choreo#readme"
+Repository = "https://github.com/tosi-n/choreo"
+Issues = "https://github.com/tosi-n/choreo/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["choreo"]

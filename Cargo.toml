@@ -2,11 +2,17 @@
 name = "choreo"
 version = "0.1.0"
 edition = "2021"
-description = "Durable workflow orchestration with BYO database"
+rust-version = "1.70"
+description = "Durable workflow orchestration built in Rust"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/your-org/choreo"
+repository = "https://github.com/tosi-n/choreo"
+homepage = "https://github.com/tosi-n/choreo"
+documentation = "https://docs.rs/choreo"
+readme = "README.md"
 keywords = ["workflow", "orchestration", "durable", "async", "tasks"]
-categories = ["asynchronous", "web-programming"]
+categories = ["asynchronous", "web-programming", "database"]
+authors = ["tosi-n"]
+exclude = ["sdks/", ".github/", "examples/"]
 
 [features]
 default = ["postgres", "sqlite"]
