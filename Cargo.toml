@@ -1,0 +1,67 @@
+[package]
+name = "choreo"
+version = "0.1.0"
+edition = "2021"
+description = "Durable workflow orchestration with BYO database"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/your-org/choreo"
+keywords = ["workflow", "orchestration", "durable", "async", "tasks"]
+categories = ["asynchronous", "web-programming"]
+
+[features]
+default = ["postgres", "sqlite"]
+postgres = ["sqlx/postgres"]
+sqlite = ["sqlx/sqlite"]
+full = ["postgres", "sqlite"]
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+async-trait = "0.1"
+futures = "0.3"
+
+# Web framework
+axum = { version = "0.7", features = ["macros"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+
+# Database
+sqlx = { version = "0.7", features = ["runtime-tokio", "chrono", "uuid", "json"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Types
+uuid = { version = "1.6", features = ["v4", "v7", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Logging & tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Config
+config = "0.14"
+dotenvy = "0.15"
+
+# Utilities
+parking_lot = "0.12"
+dashmap = "5.5"
+regex-lite = "0.1"
+
+[dev-dependencies]
+tokio-test = "0.4"
+pretty_assertions = "1.4"
+temp-dir = "0.1"
+
+[[bin]]
+name = "choreo"
+path = "src/main.rs"
+
+[lib]
+name = "choreo"
+path = "src/lib.rs"

@@ -1,0 +1,24 @@
+# Choreo Configuration Example
+# Copy to choreo.toml and modify as needed
+
+[server]
+host = "0.0.0.0"
+port = 8080
+
+# PostgreSQL (recommended for production)
+# Works with: Supabase, Neon, Railway, etc.
+[database]
+type = "postgres"
+url = "postgres://user:password@localhost:5432/choreo"
+max_connections = 10
+
+# SQLite (great for local dev / embedded)
+# [database]
+# type = "sqlite"
+# path = "choreo.db"
+
+[worker]
+poll_interval_ms = 1000
+batch_size = 10
+lock_duration_secs = 300
+max_concurrent = 10
