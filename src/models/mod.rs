@@ -31,7 +31,7 @@ impl RunStatus {
         }
     }
 
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn parse(s: &str) -> Option<Self> {
         match s {
             "queued" => Some(Self::Queued),
             "running" => Some(Self::Running),
@@ -74,7 +74,7 @@ impl StepStatus {
         }
     }
 
-    pub fn from_str(s: &str) -> Option<Self> {
+    pub fn parse(s: &str) -> Option<Self> {
         match s {
             "pending" => Some(Self::Pending),
             "running" => Some(Self::Running),
@@ -331,7 +331,7 @@ mod tests {
             RunStatus::Failed,
             RunStatus::Cancelled,
         ] {
-            assert_eq!(RunStatus::from_str(status.as_str()), Some(status));
+            assert_eq!(RunStatus::parse(status.as_str()), Some(status));
         }
     }
 

@@ -174,6 +174,7 @@ impl Default for MetricsRegistry {
 
 /// Counter - monotonically increasing value
 pub struct Counter {
+    #[allow(dead_code)]
     name: String,
     value: AtomicU64,
 }
@@ -201,6 +202,7 @@ impl Counter {
 
 /// Gauge - value that can go up or down
 pub struct Gauge {
+    #[allow(dead_code)]
     name: String,
     value: AtomicU64,
 }
@@ -232,6 +234,7 @@ impl Gauge {
 
 /// Histogram - tracks distribution of values
 pub struct Histogram {
+    #[allow(dead_code)]
     name: String,
     values: RwLock<Vec<f64>>,
     count: AtomicU64,
@@ -306,7 +309,7 @@ impl Histogram {
         let max = values.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
 
         // Calculate bucket counts
-        let mut bucket_counts: Vec<(f64, u64)> = self
+        let bucket_counts: Vec<(f64, u64)> = self
             .buckets
             .iter()
             .map(|b| (*b, values.iter().filter(|v| **v <= *b).count() as u64))

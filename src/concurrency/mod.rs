@@ -307,7 +307,7 @@ mod tests {
         });
 
         let p1 = manager.try_acquire(None).unwrap();
-        let p2 = manager.try_acquire(None).unwrap();
+        let _p2 = manager.try_acquire(None).unwrap();
 
         // Third should fail
         assert!(manager.try_acquire(None).is_err());

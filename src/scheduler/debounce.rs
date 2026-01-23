@@ -5,7 +5,6 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::{Mutex, Notify};
 use tokio::time::sleep;
-use tracing::debug;
 
 /// Debounce configuration
 #[derive(Debug, Clone)]
@@ -37,7 +36,7 @@ struct DebounceState {
     /// Whether execution is pending
     pending: bool,
     /// Notify when debounce period elapses
-    notify: Arc<Notify>,
+    _notify: Arc<Notify>,
 }
 
 /// Debouncer - delays execution until events stop arriving
@@ -112,7 +111,7 @@ impl Debouncer {
                     last_event: now,
                     first_event: now,
                     pending: true,
-                    notify: Arc::new(Notify::new()),
+                    _notify: Arc::new(Notify::new()),
                 });
                 false // Don't execute yet, wait for debounce
             }
@@ -151,7 +150,7 @@ impl Debouncer {
                     last_event: now,
                     first_event: now,
                     pending: true,
-                    notify: Arc::new(Notify::new()),
+                    _notify: Arc::new(Notify::new()),
                 });
             }
             Some(s) => {
@@ -199,7 +198,7 @@ impl Debouncer {
                     last_event: Instant::now(),
                     first_event: Instant::now(),
                     pending: false,
-                    notify: Arc::new(Notify::new()),
+                    _notify: Arc::new(Notify::new()),
                 }))
             })
             .clone();
@@ -245,7 +244,7 @@ impl Debouncer {
                     last_event: now,
                     first_event: now,
                     pending: true,
-                    notify: Arc::new(Notify::new()),
+                    _notify: Arc::new(Notify::new()),
                 }))
             })
             .clone();

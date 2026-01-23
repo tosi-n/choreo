@@ -2,10 +2,8 @@
 
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
-use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::Mutex;
-use uuid::Uuid;
 
 /// An item in the priority queue
 #[derive(Debug, Clone)]
@@ -163,6 +161,7 @@ pub struct QueueFullError {
 }
 
 /// Priority levels for common use cases
+#[allow(dead_code)]
 pub mod levels {
     pub const CRITICAL: i32 = 100;
     pub const HIGH: i32 = 75;

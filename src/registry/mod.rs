@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
-use tracing::{debug, info};
+use tracing::info;
 
 use crate::executor::{StepContext, StepError};
 use crate::models::{ConcurrencyConfig, FunctionRun, RetryConfig};
@@ -271,7 +271,7 @@ impl<S: StateStore + 'static> Registry<S> {
                 TriggerDef::Event { name, .. } => {
                     self.event_map
                         .entry(name.clone())
-                        .or_insert_with(Vec::new)
+                        .or_default()
                         .push(function_id.clone());
                 }
                 TriggerDef::Cron { schedule } => {

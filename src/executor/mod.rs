@@ -13,14 +13,14 @@ pub use step::{StepContext, StepError};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{broadcast, Semaphore};
-use tokio::time::{interval, sleep};
+use tokio::time::interval;
 use tracing::{debug, error, info, warn, Instrument};
 use uuid::Uuid;
 
 use crate::config::WorkerConfig;
 use crate::error::Result;
-use crate::models::{FunctionRun, RunStatus};
-use crate::registry::{FunctionHandler, Registry};
+use crate::models::FunctionRun;
+use crate::registry::Registry;
 use crate::storage::StateStore;
 
 /// Executor configuration
@@ -184,7 +184,7 @@ impl<S: StateStore + Clone + 'static> Executor<S> {
             .store
             .get_run(run_id)
             .await?
-            .ok_or_else(|| crate::error::ChoreoError::RunNotFound { id: run_id })?;
+            .ok_or(crate::error::ChoreoError::RunNotFound { id: run_id })?;
 
         execute_run(
             self.store.clone(),

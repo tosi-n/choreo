@@ -94,7 +94,7 @@ impl<S: StateStore + Clone + 'static> CronScheduler<S> {
         drop(last_runs);
 
         // Check if we should run
-        let should_run = match last_run {
+        match last_run {
             None => true, // Never run before
             Some(last) => {
                 // Check if a scheduled time has passed since last run
@@ -104,9 +104,7 @@ impl<S: StateStore + Clone + 'static> CronScheduler<S> {
                     false
                 }
             }
-        };
-
-        should_run
+        }
     }
 
     /// Trigger a function execution
@@ -190,7 +188,7 @@ impl CronExpr {
             if self.matches(candidate) {
                 return Some(candidate);
             }
-            candidate = candidate + chrono::Duration::minutes(1);
+            candidate += chrono::Duration::minutes(1);
         }
 
         None
