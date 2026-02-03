@@ -294,11 +294,27 @@ async fn send_event<S: StateStore>(
 
     state.store.insert_event(&event).await?;
 
-    // TODO: Match event to registered functions and create runs
-    // For now, return empty run_ids - the function registry will handle this
+    // Match event to registered functions and create runs
+    let matching_functions = state.store.get_functions_for_event(&event.name).await?;
+    let mut run_ids = Vec::new();
+
+    for func_json in &matching_functions {
+        if let Some(function_id) = func_json.get("id").and_then(|v| v.as_str()) {
+            let run = FunctionRun::new(function_id.to_string(), event.id, event.data.clone());
+            state.store.insert_run(&run).await?;
+            tracing::info!(
+                event_name = %event.name,
+                function_id = function_id,
+                run_id = %run.id,
+                "Created run from event"
+            );
+            run_ids.push(run.id);
+        }
+    }
+
     Ok(Json(SendEventResponse {
         event_id: event.id,
-        run_ids: vec![],
+        run_ids,
     }))
 }
 

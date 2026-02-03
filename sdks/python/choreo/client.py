@@ -350,8 +350,9 @@ class Choreo:
 
                             try:
                                 await self._execute_run(client, run_data)
+                                logger.info(f"Run {run_id} completed")
                             except Exception as e:
-                                logger.error(f"Run {run_id} failed: {e}")
+                                logger.error(f"Run {run_id} failed: {e}", exc_info=True)
                                 await client.fail_run(
                                     run_id,
                                     str(e),

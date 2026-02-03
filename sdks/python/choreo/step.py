@@ -108,6 +108,10 @@ class StepContext:
                     )
                 else:
                     result = func()
+                    # Handle case where func is a lambda returning a coroutine
+                    # e.g., lambda: async_func(arg) returns a coroutine
+                    if asyncio.iscoroutine(result):
+                        result = await result
 
             # Cache the result
             self._cached_steps[step_id] = result

@@ -16,16 +16,17 @@ Usage:
     await choreo.start_worker()
 """
 
-from .client import Choreo, ChoreoClient
+from .client import Choreo, ChoreoClient, ChoreoConfig
 from .event import Event, EventContext
 from .function import FunctionDef, TriggerDef, function
 from .run import FunctionRun, RunStatus
 from .step import StepContext, StepError
 
-__version__ = "0.1.0"
+__version__ = "0.1.2"
 __all__ = [
     "Choreo",
     "ChoreoClient",
+    "ChoreoConfig",
     "function",
     "FunctionDef",
     "TriggerDef",
