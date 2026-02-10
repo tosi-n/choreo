@@ -534,3 +534,201 @@ impl IntoResponse for AppError {
         (status, Json(body)).into_response()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::storage::MemoryStore;
+    use serde_json::json;
+
+    #[test]
+    fn test_app_state_new() {
+        let store = MemoryStore::new();
+        let _state = AppState { store };
+    }
+
+    #[test]
+    fn test_event_response_from_event() {
+        let event = Event::new("test.event".to_string(), json!({"key": "value"}));
+        let response = EventResponse::from(event);
+        assert_eq!(response.name, "test.event");
+        assert_eq!(response.data, json!({"key": "value"}));
+        assert!(response.timestamp.len() > 0);
+    }
+
+    #[test]
+    fn test_send_event_request() {
+        let req = SendEventRequest {
+            name: "test.event".to_string(),
+            data: json!({"key": "value"}),
+            idempotency_key: Some("test-key".to_string()),
+            user_id: Some("user-123".to_string()),
+        };
+        assert_eq!(req.name, "test.event");
+        assert_eq!(req.idempotency_key, Some("test-key".to_string()));
+    }
+
+    #[test]
+    fn test_complete_run_request() {
+        let req = CompleteRunRequest {
+            output: json!({"result": "success"}),
+        };
+        assert_eq!(req.output, json!({"result": "success"}));
+    }
+
+    #[test]
+    fn test_fail_run_request() {
+        let req = FailRunRequest {
+            error: "test error".to_string(),
+            should_retry: true,
+        };
+        assert_eq!(req.error, "test error");
+        assert!(req.should_retry);
+    }
+
+    #[test]
+    fn test_save_step_request() {
+        let req = SaveStepRequest {
+            output: json!({"step": "result"}),
+        };
+        assert_eq!(req.output, json!({"step": "result"}));
+    }
+
+    #[test]
+    fn test_worker_heartbeat_request() {
+        let req = WorkerHeartbeatRequest {
+            worker_id: "worker-1".to_string(),
+            run_ids: vec![Uuid::new_v4()],
+        };
+        assert_eq!(req.worker_id, "worker-1");
+        assert_eq!(req.run_ids.len(), 1);
+    }
+
+    #[test]
+    fn test_register_functions_request() {
+        let req = RegisterFunctionsRequest {
+            functions: vec![FunctionDefRequest {
+                id: "test-func".to_string(),
+                name: "Test Function".to_string(),
+                triggers: vec![],
+                retries: None,
+                timeout_secs: None,
+                concurrency: None,
+                throttle: None,
+                debounce: None,
+                priority: None,
+            }],
+        };
+        assert_eq!(req.functions.len(), 1);
+        assert_eq!(req.functions[0].id, "test-func");
+    }
+
+    #[test]
+    fn test_function_def_request() {
+        let def = FunctionDefRequest {
+            id: "my-function".to_string(),
+            name: "My Function".to_string(),
+            triggers: vec![TriggerDefRequest {
+                trigger_type: "event".to_string(),
+                name: Some("my.event".to_string()),
+                schedule: None,
+            }],
+            retries: Some(RetryConfig { max_attempts: 3 }),
+            timeout_secs: Some(300),
+            concurrency: Some(ConcurrencyConfig { limit: 10, key: None }),
+            throttle: None,
+            debounce: None,
+            priority: Some(1),
+        };
+        assert_eq!(def.id, "my-function");
+        assert_eq!(def.triggers.len(), 1);
+        assert_eq!(def.retries.unwrap().max_attempts, 3);
+    }
+
+    #[test]
+    fn test_trigger_def_request() {
+        let event_trigger = TriggerDefRequest {
+            trigger_type: "event".to_string(),
+            name: Some("user.created".to_string()),
+            schedule: None,
+        };
+        assert_eq!(event_trigger.trigger_type, "event");
+        assert_eq!(event_trigger.name, Some("user.created".to_string()));
+
+        let cron_trigger = TriggerDefRequest {
+            trigger_type: "cron".to_string(),
+            name: None,
+            schedule: Some("0 9 * * *".to_string()),
+        };
+        assert_eq!(cron_trigger.trigger_type, "cron");
+        assert_eq!(cron_trigger.schedule, Some("0 9 * * *".to_string()));
+    }
+
+    #[test]
+    fn test_retry_config() {
+        let config = RetryConfig { max_attempts: 5 };
+        assert_eq!(config.max_attempts, 5);
+    }
+
+    #[test]
+    fn test_concurrency_config() {
+        let config = ConcurrencyConfig {
+            limit: 10,
+            key: Some("event.data.user_id".to_string()),
+        };
+        assert_eq!(config.limit, 10);
+        assert_eq!(config.key, Some("event.data.user_id".to_string()));
+    }
+
+    #[test]
+    fn test_throttle_config() {
+        let config = ThrottleConfig {
+            limit: 100,
+            period_secs: 60,
+        };
+        assert_eq!(config.limit, 100);
+        assert_eq!(config.period_secs, 60);
+    }
+
+    #[test]
+    fn test_debounce_config() {
+        let config = DebounceConfig { period_secs: 5000 };
+        assert_eq!(config.period_secs, 5000);
+    }
+
+    #[test]
+    fn test_run_response() {
+        let response = RunResponse {
+            id: Uuid::new_v4(),
+            function_id: "test-function".to_string(),
+            event_id: Uuid::new_v4(),
+            status: "running".to_string(),
+            attempt: 1,
+            max_attempts: 3,
+            input: json!({"input": "data"}),
+            output: None,
+            error: None,
+            created_at: "2024-01-01T00:00:00Z".to_string(),
+            started_at: None,
+            ended_at: None,
+        };
+        assert_eq!(response.function_id, "test-function");
+        assert_eq!(response.status, "running");
+    }
+
+    #[test]
+    fn test_step_response() {
+        let response = StepResponse {
+            id: Uuid::new_v4(),
+            step_id: "test-step".to_string(),
+            status: "completed".to_string(),
+            output: Some(json!({"result": "success"})),
+            error: None,
+            attempt: 1,
+            created_at: "2024-01-01T00:00:00Z".to_string(),
+            ended_at: None,
+        };
+        assert_eq!(response.step_id, "test-step");
+        assert_eq!(response.status, "completed");
+    }
+}

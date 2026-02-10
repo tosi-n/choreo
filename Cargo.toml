@@ -28,7 +28,7 @@ futures = "0.3"
 
 # Web framework
 axum = { version = "0.7", features = ["macros"] }
-tower = "0.4"
+tower = "0.5"
 tower-http = { version = "0.5", features = ["cors", "trace"] }
 
 # Database
@@ -63,6 +63,12 @@ regex-lite = "0.1"
 tokio-test = "0.4"
 pretty_assertions = "1.4"
 temp-dir = "0.1"
+proptest = "1.4"
+mockall = "0.12"
+criterion = { version = "0.5", features = ["html_reports"] }
+reqwest = { version = "0.11", features = ["json"] }
+test-case = "3.0"
+rstest = "0.19"
 
 [[bin]]
 name = "choreo"
@@ -71,3 +77,43 @@ path = "src/main.rs"
 [lib]
 name = "choreo"
 path = "src/lib.rs"
+
+[[test]]
+name = "sqlite_integration"
+path = "tests/integration/storage/sqlite_test.rs"
+
+[[test]]
+name = "error_tests"
+path = "tests/unit/error_tests.rs"
+
+[[test]]
+name = "registry_tests"
+path = "tests/unit/registry_tests.rs"
+
+[[test]]
+name = "concurrency_tests"
+path = "tests/unit/concurrency_tests.rs"
+
+[[test]]
+name = "middleware_tests"
+path = "tests/unit/middleware_tests.rs"
+
+[[test]]
+name = "executor_tests"
+path = "tests/unit/executor_tests.rs"
+
+[[test]]
+name = "step_tests"
+path = "tests/unit/executor/step_tests.rs"
+
+[[test]]
+name = "storage_tests"
+path = "tests/integration/storage_tests.rs"
+
+[[test]]
+name = "api_tests"
+path = "tests/integration/api_tests.rs"
+
+[[test]]
+name = "metrics_tests"
+path = "tests/integration/metrics_tests.rs"

@@ -360,4 +360,96 @@ mod tests {
         run.status = RunStatus::Completed;
         assert!(!run.can_retry());
     }
+
+    #[test]
+    fn test_step_status_roundtrip() {
+        for status in [
+            StepStatus::Pending,
+            StepStatus::Running,
+            StepStatus::Completed,
+            StepStatus::Failed,
+            StepStatus::Skipped,
+        ] {
+            assert_eq!(StepStatus::parse(status.as_str()), Some(status));
+        }
+    }
+
+    #[test]
+    fn test_step_run_creation() {
+        let run_id = Uuid::now_v7();
+        let step = StepRun::new(run_id, "fetch-data")
+            .with_input(serde_json::json!({"url": "https://api.example.com/data"}));
+
+        assert_eq!(step.step_id, "fetch-data");
+        assert!(step.input.is_some());
+        assert_eq!(step.status, StepStatus::Pending);
+    }
+
+    #[test]
+    fn test_lock_creation() {
+        let lock = Lock {
+            key: "test-lock".to_string(),
+            holder: "worker-1".to_string(),
+            expires_at: Utc::now(),
+            acquired_at: Utc::now(),
+        };
+
+        assert_eq!(lock.key, "test-lock");
+        assert_eq!(lock.holder, "worker-1");
+    }
+
+    #[test]
+    fn test_function_config_defaults() {
+        let config = FunctionConfig {
+            id: "test-func".to_string(),
+            name: "Test Function".to_string(),
+            triggers: vec!["test.event".to_string()],
+            retries: RetryConfig::default(),
+            concurrency: None,
+            timeout_secs: 300,
+        };
+
+        assert_eq!(config.retries.max_attempts, 3);
+        assert_eq!(config.timeout_secs, 300);
+    }
+
+    #[test]
+    fn test_retry_config_defaults() {
+        let retry = RetryConfig::default();
+        assert_eq!(retry.max_attempts, 3);
+        assert_eq!(retry.initial_delay_ms, 1000);
+        assert_eq!(retry.max_delay_ms, 60000);
+        assert!((retry.backoff_multiplier - 2.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_concurrency_config() {
+        let config = ConcurrencyConfig {
+            limit: 10,
+            key: Some("event.data.user_id".to_string()),
+        };
+        assert_eq!(config.limit, 10);
+        assert!(config.key.is_some());
+    }
+
+    #[test]
+    fn test_run_status_is_terminal() {
+        assert!(RunStatus::Completed.is_terminal());
+        assert!(RunStatus::Failed.is_terminal());
+        assert!(RunStatus::Cancelled.is_terminal());
+        assert!(!RunStatus::Queued.is_terminal());
+        assert!(!RunStatus::Running.is_terminal());
+    }
+
+    #[test]
+    fn test_function_run_with_options() {
+        let run = FunctionRun::new("test", Uuid::now_v7(), serde_json::json!({"key": "value"}))
+            .with_max_attempts(5)
+            .with_concurrency_key("user-123")
+            .with_delay(Utc::now());
+
+        assert_eq!(run.max_attempts, 5);
+        assert!(run.concurrency_key.is_some());
+        assert!(run.run_after.is_some());
+    }
 }

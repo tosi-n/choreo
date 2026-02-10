@@ -203,9 +203,8 @@ class StepContext:
         async def do_send():
             if self._client:
                 result = await self._client.send_event(event_name, data, idempotency_key)
-                return result.get("event_id")
+                return result.get("id")
             else:
-                # Mock for local testing
                 import uuid
 
                 return str(uuid.uuid4())

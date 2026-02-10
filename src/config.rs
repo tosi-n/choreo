@@ -132,3 +132,172 @@ fn default_lock_duration() -> i64 {
 fn default_max_concurrent() -> usize {
     10
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_database_config_sqlite() {
+        let config = DatabaseConfig::sqlite("test.db");
+        match config {
+            DatabaseConfig::Sqlite { path } => {
+                assert_eq!(path, "test.db");
+            }
+            _ => panic!("Expected Sqlite variant"),
+        }
+    }
+
+    #[test]
+    fn test_database_config_postgres() {
+        let config = DatabaseConfig::postgres("postgres://localhost/choreo");
+        match config {
+            DatabaseConfig::Postgres {
+                url,
+                max_connections,
+            } => {
+                assert_eq!(url, "postgres://localhost/choreo");
+                assert_eq!(max_connections, 10);
+            }
+            _ => panic!("Expected Postgres variant"),
+        }
+    }
+
+    #[test]
+    fn test_database_config_in_memory() {
+        let config = DatabaseConfig::in_memory();
+        match config {
+            DatabaseConfig::Sqlite { path } => {
+                assert_eq!(path, ":memory:");
+            }
+            _ => panic!("Expected Sqlite variant"),
+        }
+    }
+
+    #[test]
+    fn test_database_config_postgres_with_custom_pool() {
+        let config = DatabaseConfig::Postgres {
+            url: "postgres://localhost/choreo".to_string(),
+            max_connections: 20,
+        };
+        match config {
+            DatabaseConfig::Postgres {
+                url,
+                max_connections,
+            } => {
+                assert_eq!(url, "postgres://localhost/choreo");
+                assert_eq!(max_connections, 20);
+            }
+            _ => panic!("Expected Postgres variant"),
+        }
+    }
+
+    #[test]
+    fn test_worker_config_new() {
+        let config = WorkerConfig {
+            worker_id: "test-worker".to_string(),
+            poll_interval_ms: 2000,
+            batch_size: 20,
+            lock_duration_secs: 600,
+            max_concurrent: 20,
+        };
+        assert_eq!(config.worker_id, "test-worker");
+        assert_eq!(config.poll_interval(), Duration::from_secs(2));
+        assert_eq!(config.batch_size, 20);
+        assert_eq!(config.lock_duration_secs, 600);
+        assert_eq!(config.max_concurrent, 20);
+    }
+
+    #[test]
+    fn test_worker_config_default() {
+        let config = WorkerConfig::default();
+        assert!(config.worker_id.starts_with("worker-"));
+        assert_eq!(config.poll_interval_ms, 1000);
+        assert_eq!(config.batch_size, 10);
+        assert_eq!(config.lock_duration_secs, 300);
+        assert_eq!(config.max_concurrent, 10);
+    }
+
+    #[test]
+    fn test_worker_config_poll_interval() {
+        let config = WorkerConfig {
+            poll_interval_ms: 500,
+            ..Default::default()
+        };
+        assert_eq!(config.poll_interval(), Duration::from_millis(500));
+    }
+
+    #[test]
+    fn test_config_with_sqlite() {
+        let config = Config {
+            server: ServerConfig::default(),
+            database: DatabaseConfig::sqlite("choreo.db"),
+            worker: WorkerConfig::default(),
+        };
+        match &config.database {
+            DatabaseConfig::Sqlite { path } => {
+                assert_eq!(path, "choreo.db");
+            }
+            _ => panic!("Expected Sqlite"),
+        }
+    }
+
+    #[test]
+    fn test_config_with_postgres() {
+        let config = Config {
+            server: ServerConfig::default(),
+            database: DatabaseConfig::postgres("postgres://localhost/choreo"),
+            worker: WorkerConfig::default(),
+        };
+        match &config.database {
+            DatabaseConfig::Postgres { url, .. } => {
+                assert!(url.contains("postgres"));
+            }
+            _ => panic!("Expected Postgres"),
+        }
+    }
+
+    #[test]
+    fn test_server_config_address() {
+        let server = ServerConfig {
+            host: "127.0.0.1".to_string(),
+            port: 3000,
+        };
+        assert_eq!(server.address(), "127.0.0.1:3000");
+    }
+
+    #[test]
+    fn test_server_config_default() {
+        let server = ServerConfig::default();
+        assert_eq!(server.host, "0.0.0.0");
+        assert_eq!(server.port, 8080);
+        assert_eq!(server.address(), "0.0.0.0:8080");
+    }
+
+    #[test]
+    fn test_worker_config_batch_size() {
+        let config = WorkerConfig {
+            batch_size: 100,
+            ..Default::default()
+        };
+        assert_eq!(config.batch_size, 100);
+    }
+
+    #[test]
+    fn test_worker_config_lock_duration() {
+        let config = WorkerConfig {
+            lock_duration_secs: 1200,
+            ..Default::default()
+        };
+        assert_eq!(config.lock_duration_secs, 1200);
+    }
+
+    #[test]
+    fn test_worker_config_max_concurrent() {
+        let config = WorkerConfig {
+            max_concurrent: 100,
+            ..Default::default()
+        };
+        assert_eq!(config.max_concurrent, 100);
+    }
+}

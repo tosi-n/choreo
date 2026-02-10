@@ -334,4 +334,82 @@ mod tests {
         // Different key should succeed
         let _p2 = manager.try_acquire(Some("user-456")).unwrap();
     }
+
+    #[tokio::test]
+    async fn test_concurrency_config_defaults() {
+        let config = ConcurrencyConfig::default();
+        assert_eq!(config.global_limit, 100);
+        assert_eq!(config.default_key_limit, 1);
+        assert_eq!(config.max_queue_size, 10000);
+        assert_eq!(config.queue_timeout.as_secs(), 300);
+    }
+
+    #[tokio::test]
+    async fn test_concurrency_metrics_snapshot() {
+        let metrics = ConcurrencyMetrics::default();
+        let snapshot = metrics.snapshot();
+        assert_eq!(snapshot.acquisitions, 0);
+        assert_eq!(snapshot.releases, 0);
+        assert_eq!(snapshot.rejections, 0);
+        assert_eq!(snapshot.timeouts, 0);
+    }
+
+    #[tokio::test]
+    async fn test_available_permits() {
+        let manager = ConcurrencyManager::new(ConcurrencyConfig {
+            global_limit: 5,
+            ..Default::default()
+        });
+
+        assert_eq!(manager.available_permits(), 5);
+
+        let _permit = manager.try_acquire(None).unwrap();
+        assert_eq!(manager.available_permits(), 4);
+    }
+
+    #[tokio::test]
+    async fn test_key_active_count() {
+        let manager = ConcurrencyManager::new(ConcurrencyConfig {
+            global_limit: 10,
+            default_key_limit: 2,
+            ..Default::default()
+        });
+
+        assert_eq!(manager.key_active_count("user-123"), 0);
+
+        let _p1 = manager.try_acquire(Some("user-123")).unwrap();
+        assert_eq!(manager.key_active_count("user-123"), 1);
+
+        let _p2 = manager.try_acquire(Some("user-123")).unwrap();
+        assert_eq!(manager.key_active_count("user-123"), 2);
+    }
+
+    #[tokio::test]
+    async fn test_concurrency_timeout() {
+        let manager = ConcurrencyManager::new(ConcurrencyConfig {
+            global_limit: 1,
+            queue_timeout: Duration::from_millis(100),
+            ..Default::default()
+        });
+
+        let _p1 = manager.try_acquire(None).unwrap();
+
+        // This should timeout
+        let result = manager.acquire_with_timeout(None, Duration::from_millis(50)).await;
+        assert!(matches!(result, Err(ConcurrencyError::Timeout(_))));
+    }
+
+    #[tokio::test]
+    async fn test_acquire_with_permit_drop() {
+        let manager = ConcurrencyManager::new(ConcurrencyConfig {
+            global_limit: 1,
+            ..Default::default()
+        });
+
+        let permit = manager.try_acquire(None).unwrap();
+        assert_eq!(manager.available_permits(), 0);
+
+        drop(permit);
+        assert_eq!(manager.available_permits(), 1);
+    }
 }

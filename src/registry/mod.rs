@@ -370,3 +370,69 @@ fn matches_event_pattern(pattern: &str, event_name: &str) -> bool {
 
     false
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::storage::MemoryStore;
+
+    #[tokio::test]
+    async fn test_registry_creation() {
+        let registry = Registry::<MemoryStore>::new();
+        assert_eq!(registry.get_function_ids().len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_function_definition_builder() {
+        let def = FunctionDef::new("test-function")
+            .name("Test Function")
+            .trigger_event("test.event")
+            .trigger_cron("0 9 * * *")
+            .retries(5)
+            .concurrency(10, Some("event.data.user_id".to_string()))
+            .timeout(600)
+            .priority(5);
+
+        assert_eq!(def.id, "test-function");
+        assert_eq!(def.name, "Test Function");
+        assert_eq!(def.triggers.len(), 2);
+        assert_eq!(def.retries.max_attempts, 5);
+        assert_eq!(def.timeout_secs, 600);
+        assert_eq!(def.priority, 5);
+    }
+
+    #[tokio::test]
+    async fn test_wildcard_event_matching() {
+        assert!(matches_event_pattern("user.*", "user.created"));
+        assert!(matches_event_pattern("*.created", "user.created"));
+        assert!(!matches_event_pattern("user.*", "order.created"));
+    }
+
+    #[tokio::test]
+    async fn test_trigger_def_event() {
+        let trigger = TriggerDef::Event {
+            name: "user.created".to_string(),
+            filter: None,
+        };
+        match trigger {
+            TriggerDef::Event { name, filter } => {
+                assert_eq!(name, "user.created");
+                assert!(filter.is_none());
+            }
+            _ => panic!("Expected Event trigger"),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_trigger_def_cron() {
+        let trigger = TriggerDef::Cron {
+            schedule: "0 9 * * *".to_string(),
+        };
+        match trigger {
+            TriggerDef::Cron { schedule } => {
+                assert_eq!(schedule, "0 9 * * *");
+            }
+            _ => panic!("Expected Cron trigger"),
+        }
+    }
+}

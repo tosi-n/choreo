@@ -287,7 +287,8 @@ async fn execute_run<S: StateStore + Clone>(
 }
 
 /// Calculate exponential backoff with jitter
-fn calculate_backoff(attempt: i32, initial_ms: u64, max_ms: u64, multiplier: f64) -> u64 {
+#[doc(hidden)]
+pub fn calculate_backoff(attempt: i32, initial_ms: u64, max_ms: u64, multiplier: f64) -> u64 {
     let base_delay = initial_ms as f64 * multiplier.powi(attempt - 1);
     let capped = base_delay.min(max_ms as f64);
 
@@ -297,11 +298,76 @@ fn calculate_backoff(attempt: i32, initial_ms: u64, max_ms: u64, multiplier: f64
 }
 
 /// Simple pseudo-random for jitter (no external crate needed)
-fn rand_simple() -> f64 {
+#[doc(hidden)]
+pub fn rand_simple() -> f64 {
     use std::time::SystemTime;
     let nanos = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap()
         .subsec_nanos();
     (nanos as f64) / (u32::MAX as f64)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::storage::MemoryStore;
+
+    #[test]
+    fn test_executor_config_defaults() {
+        let config = ExecutorConfig::default();
+        assert_eq!(config.poll_interval, Duration::from_secs(1));
+        assert_eq!(config.batch_size, 10);
+        assert_eq!(config.lock_duration_secs, 300);
+        assert_eq!(config.max_concurrent, 10);
+    }
+
+    #[test]
+    fn test_executor_config_from_worker_config() {
+        let worker_config = WorkerConfig::default();
+        let executor_config = ExecutorConfig::from(worker_config);
+        assert!(executor_config.worker_id.starts_with("worker-"));
+        assert_eq!(executor_config.poll_interval, Duration::from_secs(1));
+    }
+
+    #[tokio::test]
+    async fn test_executor_new() {
+        let store = MemoryStore::new();
+        let registry: Arc<Registry<MemoryStore>> = Arc::new(Registry::new());
+        let config = ExecutorConfig::default();
+
+        let executor = Executor::new(store, registry, config);
+        let _handle = executor.shutdown_handle();
+    }
+
+    #[tokio::test]
+    async fn test_retry_backoff_defaults() {
+        let delay = calculate_backoff(1, 1000, 60000, 2.0);
+        assert!(delay >= 1000);
+        assert!(delay <= 1500);
+    }
+
+    #[tokio::test]
+    async fn test_retry_backoff_increases() {
+        let delay1 = calculate_backoff(1, 1000, 60000, 2.0);
+        let delay2 = calculate_backoff(2, 1000, 60000, 2.0);
+        let delay3 = calculate_backoff(3, 1000, 60000, 2.0);
+
+        assert!(delay2 > delay1);
+        assert!(delay3 > delay2);
+    }
+
+    #[tokio::test]
+    async fn test_retry_backoff_caps_at_max() {
+        let delay = calculate_backoff(10, 1000, 5000, 2.0);
+        assert!(delay <= 5000 + 1250); // max + 25% jitter
+    }
+
+    #[tokio::test]
+    async fn test_rand_simple_returns_valid_range() {
+        for _ in 0..100 {
+            let val = rand_simple();
+            assert!(val >= 0.0 && val < 1.0, "rand_simple should return value in [0, 1)");
+        }
+    }
 }

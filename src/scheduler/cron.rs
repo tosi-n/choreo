@@ -260,3 +260,107 @@ fn parse_field(field: &str) -> std::result::Result<CronField, String> {
 
     Err(format!("Invalid cron field: {}", field))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::{Utc, TimeZone, Timelike};
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn test_parse_valid_cron_expressions() {
+        let test_cases = vec![
+            ("0 9 * * *", "Daily at 9am"),
+            ("*/5 * * * *", "Every 5 minutes"),
+            ("0 0 1 * *", "First day of month at midnight"),
+            ("30 8 * * 1-5", "8:30am weekdays"),
+            ("0 12 * * 0", "Noon on Sundays"),
+            ("0,30 * * * *", "Every hour at :00 and :30"),
+            ("0 9-17 * * 1-5", "9am-5pm weekdays"),
+        ];
+
+        for (expr, description) in test_cases {
+            let result = parse_cron(expr);
+            assert!(result.is_ok(), "Failed to parse '{}' ({})", expr, description);
+        }
+    }
+
+    #[test]
+    fn test_parse_invalid_cron_expressions() {
+        let invalid_expressions = vec![
+            "* * *",
+            "* * * * * *",
+            "abc * * * *",
+        ];
+
+        for expr in invalid_expressions {
+            let result = parse_cron(expr);
+            assert!(result.is_err(), "Should reject invalid expression: {}", expr);
+        }
+    }
+
+    #[test]
+    fn test_cron_expr_matches_specific_time() {
+        let cron = parse_cron("30 9 * * *").unwrap();
+
+        let jan_15_2024_093000 = Utc.with_ymd_and_hms(2024, 1, 15, 9, 30, 0).unwrap();
+        assert!(cron.matches(jan_15_2024_093000));
+
+        let jan_15_2024_092900 = Utc.with_ymd_and_hms(2024, 1, 15, 9, 29, 0).unwrap();
+        assert!(!cron.matches(jan_15_2024_092900));
+    }
+
+    #[test]
+    fn test_cron_expr_next_after_simple() {
+        let cron = parse_cron("0 9 * * *").unwrap();
+
+        let before = Utc.with_ymd_and_hms(2024, 1, 15, 8, 30, 0).unwrap();
+        let next = cron.next_after(before);
+
+        assert!(next.is_some());
+        let next = next.unwrap();
+        assert_eq!(next.hour(), 9);
+        assert_eq!(next.minute(), 0);
+    }
+
+    #[test]
+    fn test_cron_expr_range_matching() {
+        let cron = parse_cron("0 9-17 * * *").unwrap();
+
+        let _9am = Utc.with_ymd_and_hms(2024, 1, 15, 9, 0, 0).unwrap();
+        let _12pm = Utc.with_ymd_and_hms(2024, 1, 15, 12, 0, 0).unwrap();
+        let _5pm = Utc.with_ymd_and_hms(2024, 1, 15, 17, 0, 0).unwrap();
+        let _6pm = Utc.with_ymd_and_hms(2024, 1, 15, 18, 0, 0).unwrap();
+
+        assert!(cron.matches(_9am));
+        assert!(cron.matches(_12pm));
+        assert!(cron.matches(_5pm));
+        assert!(!cron.matches(_6pm));
+    }
+
+    #[test]
+    fn test_cron_expr_list_matching() {
+        let cron = parse_cron("0 0,12 * * *").unwrap();
+
+        let midnight = Utc.with_ymd_and_hms(2024, 1, 15, 0, 0, 0).unwrap();
+        let noon = Utc.with_ymd_and_hms(2024, 1, 15, 12, 0, 0).unwrap();
+        let _3am = Utc.with_ymd_and_hms(2024, 1, 15, 3, 0, 0).unwrap();
+
+        assert!(cron.matches(midnight));
+        assert!(cron.matches(noon));
+        assert!(!cron.matches(_3am));
+    }
+
+    #[test]
+    fn test_cron_expr_step_matching() {
+        let cron = parse_cron("*/15 * * * *").unwrap();
+
+        let _0 = Utc.with_ymd_and_hms(2024, 1, 15, 9, 0, 0).unwrap();
+        let _15 = Utc.with_ymd_and_hms(2024, 1, 15, 9, 15, 0).unwrap();
+        let _10 = Utc.with_ymd_and_hms(2024, 1, 15, 9, 10, 0).unwrap();
+
+        assert!(cron.matches(_0));
+        assert!(cron.matches(_15));
+        assert!(!cron.matches(_10));
+    }
+}

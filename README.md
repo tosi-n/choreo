@@ -202,6 +202,41 @@ git push origin v0.2.0
 
 The CI workflow builds all artifacts and creates a GitHub Release with auto-generated release notes.
 
+## TODO
+
+### Test Coverage (Target: 88%)
+
+The following tests need to be implemented to reach 88% coverage:
+
+#### E2E Tests
+- [ ] `tests/e2e/workflow_test.rs` - End-to-end workflow tests
+  - Full workflow execution from event to completion
+  - Worker startup and shutdown
+  - Multiple function coordination
+
+#### PostgreSQL Integration Tests
+- [ ] Real database connection tests
+- [ ] Migration tests
+- [ ] Connection pool tests
+
+#### Additional Test Areas
+- [ ] Error handling edge cases
+- [ ] Timeout and cancellation scenarios
+- [ ] Recovery after database disconnects
+- [ ] Concurrent worker scenarios
+
+### Coverage Progress
+
+| Module | Current | Target |
+|--------|---------|--------|
+| Core (error, config, api, metrics) | ~90% | 95% |
+| Storage layer | ~75% | 85% |
+| Scheduler | ~70% | 85% |
+| Executor | ~65% | 80% |
+| E2E workflows | 0% | 85% |
+
+Run `cargo tarpaulin --features sqlite --lib` to check current coverage.
+
 ## License
 
 MIT OR Apache-2.0

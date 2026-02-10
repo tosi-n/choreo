@@ -209,4 +209,78 @@ mod tests {
 
         assert!(queue.push("c", 0).await.is_err());
     }
+
+    #[tokio::test]
+    async fn test_queue_is_empty() {
+        let queue = PriorityQueue::<i32>::new();
+        assert!(queue.is_empty().await);
+    }
+
+    #[tokio::test]
+    async fn test_queue_len() {
+        let queue = PriorityQueue::new();
+        assert_eq!(queue.len().await, 0);
+
+        queue.push("item", 0).await.unwrap();
+        assert_eq!(queue.len().await, 1);
+    }
+
+    #[tokio::test]
+    async fn test_queue_peek() {
+        let queue = PriorityQueue::new();
+        queue.push("low", levels::LOW).await.unwrap();
+        queue.push("high", levels::HIGH).await.unwrap();
+
+        let peeked = queue.peek().await.unwrap();
+        assert_eq!(peeked.data, "high");
+        assert_eq!(queue.len().await, 2); // Should not remove
+    }
+
+    #[tokio::test]
+    async fn test_queue_drain() {
+        let queue = PriorityQueue::new();
+
+        queue.push("a", levels::LOW).await.unwrap();
+        queue.push("b", levels::HIGH).await.unwrap();
+        queue.push("c", levels::NORMAL).await.unwrap();
+
+        let drained = queue.drain(2).await;
+        assert_eq!(drained.len(), 2);
+        assert_eq!(drained[0].data, "b"); // highest priority first
+    }
+
+    #[tokio::test]
+    async fn test_queue_clear() {
+        let queue = PriorityQueue::new();
+
+        queue.push("a", 0).await.unwrap();
+        queue.push("b", 0).await.unwrap();
+        assert_eq!(queue.len().await, 2);
+
+        queue.clear().await;
+        assert!(queue.is_empty().await);
+    }
+
+    #[tokio::test]
+    async fn test_priority_levels() {
+        assert!(levels::CRITICAL > levels::HIGH);
+        assert!(levels::HIGH > levels::NORMAL);
+        assert!(levels::NORMAL > levels::LOW);
+        assert!(levels::LOW > levels::BACKGROUND);
+    }
+
+    #[tokio::test]
+    async fn test_priority_item_clone() {
+        let item = PriorityItem::new("data", 10, 42);
+        let cloned = item.clone();
+        assert_eq!(item.data, cloned.data);
+        assert_eq!(item.priority, cloned.priority);
+        assert_eq!(item.sequence, cloned.sequence);
+    }
+
+    #[tokio::test]
+    async fn test_pop_empty_queue() {
+        let queue = PriorityQueue::<i32>::new();
+        assert!(queue.pop().await.is_none());
+    }
 }

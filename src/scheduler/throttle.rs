@@ -192,4 +192,88 @@ mod tests {
 
         assert!(throttler.acquire(Some("key2")).await); // key2 still has quota
     }
+
+    #[tokio::test]
+    async fn test_throttle_config_defaults() {
+        let config = ThrottleConfig::default();
+        assert_eq!(config.limit, 10);
+        assert_eq!(config.period, Duration::from_secs(60));
+        assert!(!config.per_key);
+    }
+
+    #[tokio::test]
+    async fn test_throttle_check_only() {
+        let throttler = Throttler::new(ThrottleConfig {
+            limit: 1,
+            period: Duration::from_secs(1),
+            per_key: false,
+        });
+
+        assert!(throttler.check(None).await);
+        assert!(throttler.check(None).await);
+        assert!(throttler.check(None).await);
+    }
+
+    #[tokio::test]
+    async fn test_throttle_record_only() {
+        let throttler = Throttler::new(ThrottleConfig {
+            limit: 3,
+            period: Duration::from_secs(1),
+            per_key: false,
+        });
+
+        throttler.record(None).await;
+        throttler.record(None).await;
+        throttler.record(None).await;
+
+        assert_eq!(throttler.global_count().await, 3);
+    }
+
+    #[tokio::test]
+    async fn test_throttle_remaining() {
+        let throttler = Throttler::new(ThrottleConfig {
+            limit: 5,
+            period: Duration::from_secs(1),
+            per_key: false,
+        });
+
+        assert_eq!(throttler.remaining(None).await, 5);
+
+        throttler.record(None).await;
+        assert_eq!(throttler.remaining(None).await, 4);
+
+        for _ in 0..4 {
+            throttler.record(None).await;
+        }
+        assert_eq!(throttler.remaining(None).await, 0);
+    }
+
+    #[tokio::test]
+    async fn test_throttle_per_key_counts() {
+        let throttler = Throttler::new(ThrottleConfig {
+            limit: 3,
+            period: Duration::from_secs(1),
+            per_key: true,
+        });
+
+        throttler.record(Some("user-1")).await;
+        throttler.record(Some("user-1")).await;
+        throttler.record(Some("user-2")).await;
+
+        assert_eq!(throttler.key_count("user-1").await, 2);
+        assert_eq!(throttler.key_count("user-2").await, 1);
+        assert_eq!(throttler.key_count("user-3").await, 0);
+    }
+
+    #[tokio::test]
+    async fn test_throttle_no_key_per_key_mode() {
+        let throttler = Throttler::new(ThrottleConfig {
+            limit: 1,
+            period: Duration::from_secs(1),
+            per_key: true,
+        });
+
+        // No key provided should allow execution
+        assert!(throttler.acquire(None).await);
+    }
 }

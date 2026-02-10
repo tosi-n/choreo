@@ -92,7 +92,7 @@ class FunctionRun:
     @property
     def can_retry(self) -> bool:
         """Check if run can be retried"""
-        return self.attempt < self.max_attempts and not self.status.is_terminal
+        return self.attempt < self.max_attempts and self.status != RunStatus.COMPLETED
 
 
 def _parse_datetime(value: Optional[str]) -> Optional[datetime]:

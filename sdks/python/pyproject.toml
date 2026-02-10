@@ -34,6 +34,10 @@ dependencies = [
 dev = [
     "pytest>=7.0",
     "pytest-asyncio>=0.21",
+    "pytest-cov>=4.0",
+    "pytest-httpx>=0.28",
+    "respx>=0.20",
+    "factory-boy>=3.3",
     "black==24.3.0",
     "ruff>=0.1",
     "mypy>=1.0",
@@ -58,3 +62,23 @@ line-length = 100
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W"]
 ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+addopts = "-v --tb=short"
+
+[tool.coverage.run]
+source = ["choreo"]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+]

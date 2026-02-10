@@ -112,3 +112,92 @@ impl<S: StateStore + Clone + 'static> Scheduler<S> {
         &self.cron
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::registry::Registry;
+    use crate::storage::MemoryStore;
+    use std::sync::Arc;
+    use std::time::Duration;
+
+    #[test]
+    fn test_scheduler_new() {
+        let store = MemoryStore::new();
+        let registry: Arc<Registry<MemoryStore>> = Arc::new(Registry::new());
+        let scheduler = Scheduler::new(store, registry);
+        let _shutdown = scheduler.shutdown_handle();
+    }
+
+    #[test]
+    fn test_scheduler_shutdown_handle_clone() {
+        let store = MemoryStore::new();
+        let registry: Arc<Registry<MemoryStore>> = Arc::new(Registry::new());
+        let scheduler = Scheduler::new(store, registry);
+        let handle1 = scheduler.shutdown_handle();
+        let _handle2 = handle1.clone();
+    }
+
+    #[tokio::test]
+    async fn test_scheduler_register_throttle() {
+        let store = MemoryStore::new();
+        let registry: Arc<Registry<MemoryStore>> = Arc::new(Registry::new());
+        let scheduler = Scheduler::new(store, registry);
+
+        scheduler.register_throttle(
+            "test-function",
+            ThrottleConfig {
+                limit: 10,
+                period: Duration::from_secs(60),
+                per_key: false,
+            },
+        );
+
+        assert!(scheduler.throttlers.contains_key("test-function"));
+    }
+
+    #[tokio::test]
+    async fn test_scheduler_register_debounce() {
+        let store = MemoryStore::new();
+        let registry: Arc<Registry<MemoryStore>> = Arc::new(Registry::new());
+        let scheduler = Scheduler::new(store, registry);
+
+        scheduler.register_debounce(
+            "test-function",
+            DebounceConfig {
+                period: Duration::from_secs(10),
+                per_key: true,
+                max_wait: None,
+            },
+        );
+
+        assert!(scheduler.debouncers.contains_key("test-function"));
+    }
+
+    #[tokio::test]
+    async fn test_scheduler_check_throttle_no_config() {
+        let store = MemoryStore::new();
+        let registry: Arc<Registry<MemoryStore>> = Arc::new(Registry::new());
+        let scheduler = Scheduler::new(store, registry);
+
+        assert!(scheduler.check_throttle("unknown-function", None).await);
+    }
+
+    #[tokio::test]
+    async fn test_scheduler_check_debounce_no_config() {
+        let store = MemoryStore::new();
+        let registry: Arc<Registry<MemoryStore>> = Arc::new(Registry::new());
+        let scheduler = Scheduler::new(store, registry);
+
+        assert!(scheduler.check_debounce("unknown-function", None).await);
+    }
+
+    #[tokio::test]
+    async fn test_scheduler_record_throttle_no_config() {
+        let store = MemoryStore::new();
+        let registry: Arc<Registry<MemoryStore>> = Arc::new(Registry::new());
+        let scheduler = Scheduler::new(store, registry);
+
+        scheduler.record_throttle("unknown-function", None).await;
+    }
+}
