@@ -395,7 +395,9 @@ mod tests {
         let _p1 = manager.try_acquire(None).unwrap();
 
         // This should timeout
-        let result = manager.acquire_with_timeout(None, Duration::from_millis(50)).await;
+        let result = manager
+            .acquire_with_timeout(None, Duration::from_millis(50))
+            .await;
         assert!(matches!(result, Err(ConcurrencyError::Timeout(_))));
     }
 

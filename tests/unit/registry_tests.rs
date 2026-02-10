@@ -32,8 +32,7 @@ fn test_function_definition_builder() {
 
 #[test]
 fn test_function_definition_with_batch() {
-    let def = FunctionDef::new("batch-function")
-        .batch(100, 30);
+    let def = FunctionDef::new("batch-function").batch(100, 30);
 
     assert!(def.batch.is_some());
     let batch = def.batch.unwrap();
@@ -43,8 +42,7 @@ fn test_function_definition_with_batch() {
 
 #[test]
 fn test_function_definition_with_throttle() {
-    let def = FunctionDef::new("throttle-function")
-        .throttle(50, 60, None);
+    let def = FunctionDef::new("throttle-function").throttle(50, 60, None);
 
     assert!(def.throttle.is_some());
     let throttle = def.throttle.unwrap();
@@ -94,8 +92,7 @@ fn test_trigger_def_cron() {
 fn test_registry_register_function() {
     let registry = Registry::<MemoryStore>::new();
 
-    let def = FunctionDef::new("test-function")
-        .name("Test Function");
+    let def = FunctionDef::new("test-function").name("Test Function");
 
     let handler = AsyncFnHandler::new(|_run, _step| Box::pin(async { Ok(json!({})) }) as _);
     registry.register(def, handler);
@@ -107,8 +104,7 @@ fn test_registry_register_function() {
 fn test_registry_get_function() {
     let registry = Registry::<MemoryStore>::new();
 
-    let def = FunctionDef::new("get-test-function")
-        .name("Get Test");
+    let def = FunctionDef::new("get-test-function").name("Get Test");
 
     let handler = AsyncFnHandler::new(|_run, _step| Box::pin(async { Ok(json!({})) }) as _);
     registry.register(def, handler);
@@ -153,8 +149,7 @@ fn test_registry_empty_list() {
 
 #[test]
 fn test_function_def_clone() {
-    let def1 = FunctionDef::new("test")
-        .name("Test");
+    let def1 = FunctionDef::new("test").name("Test");
 
     let def2 = def1.clone();
 
@@ -166,8 +161,7 @@ fn test_function_def_clone() {
 fn test_registry_get_functions_for_event() {
     let registry = Registry::<MemoryStore>::new();
 
-    let def = FunctionDef::new("test-function")
-        .trigger_event("user.created");
+    let def = FunctionDef::new("test-function").trigger_event("user.created");
 
     let handler = AsyncFnHandler::new(|_run, _step| Box::pin(async { Ok(json!({})) }) as _);
     registry.register(def, handler);
@@ -189,8 +183,7 @@ fn test_registry_get_functions_for_event_not_found() {
 fn test_registry_get_cron_triggers() {
     let registry = Registry::<MemoryStore>::new();
 
-    let def = FunctionDef::new("scheduled-function")
-        .trigger_cron("0 9 * * *");
+    let def = FunctionDef::new("scheduled-function").trigger_cron("0 9 * * *");
 
     let handler = AsyncFnHandler::new(|_run, _step| Box::pin(async { Ok(json!({})) }) as _);
     registry.register(def, handler);

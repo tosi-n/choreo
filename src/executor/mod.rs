@@ -367,7 +367,10 @@ mod tests {
     async fn test_rand_simple_returns_valid_range() {
         for _ in 0..100 {
             let val = rand_simple();
-            assert!(val >= 0.0 && val < 1.0, "rand_simple should return value in [0, 1)");
+            assert!(
+                val >= 0.0 && val < 1.0,
+                "rand_simple should return value in [0, 1)"
+            );
         }
     }
 }

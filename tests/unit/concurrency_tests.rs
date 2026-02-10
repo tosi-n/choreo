@@ -1,8 +1,10 @@
 //! Concurrency module tests
 
-use choreo::concurrency::{ConcurrencyConfig, ConcurrencyError, ConcurrencyManager, ConcurrencyMetrics};
-use std::time::Duration;
+use choreo::concurrency::{
+    ConcurrencyConfig, ConcurrencyError, ConcurrencyManager, ConcurrencyMetrics,
+};
 use std::sync::atomic::Ordering;
+use std::time::Duration;
 
 #[tokio::test]
 async fn test_global_concurrency() {
@@ -95,7 +97,9 @@ async fn test_concurrency_timeout() {
 
     let _p1 = manager.try_acquire(None).unwrap();
 
-    let result = manager.acquire_with_timeout(None, Duration::from_millis(50)).await;
+    let result = manager
+        .acquire_with_timeout(None, Duration::from_millis(50))
+        .await;
     assert!(matches!(result, Err(ConcurrencyError::Timeout(_))));
 }
 
@@ -139,7 +143,9 @@ async fn test_acquire_with_timeout_success() {
 
     let _p1 = manager.try_acquire(None).unwrap();
 
-    let result = manager.acquire_with_timeout(None, Duration::from_secs(1)).await;
+    let result = manager
+        .acquire_with_timeout(None, Duration::from_secs(1))
+        .await;
     assert!(result.is_ok());
 }
 

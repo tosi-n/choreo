@@ -1,8 +1,8 @@
 //! Executor module tests
 
-use choreo::{Executor, ExecutorConfig};
-use choreo::storage::MemoryStore;
 use choreo::registry::Registry;
+use choreo::storage::MemoryStore;
+use choreo::{Executor, ExecutorConfig};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -119,7 +119,10 @@ fn test_retry_backoff_custom_multiplier() {
 fn test_rand_simple_returns_valid_range() {
     for _ in 0..100 {
         let val = choreo::executor::rand_simple();
-        assert!(val >= 0.0 && val < 1.0, "rand_simple should return value in [0, 1)");
+        assert!(
+            val >= 0.0 && val < 1.0,
+            "rand_simple should return value in [0, 1)"
+        );
     }
 }
 
@@ -203,7 +206,17 @@ fn test_retry_backoff_jitter_range() {
         let delay = choreo::executor::calculate_backoff(attempt, base_delay, max_delay, 2.0);
         let expected_base = base_delay * 2u64.pow((attempt - 1) as u32);
         let max_with_jitter = expected_base.min(max_delay) + (expected_base.min(max_delay) / 4);
-        assert!(delay >= base_delay, "Delay {} should be >= base {}", delay, base_delay);
-        assert!(delay <= max_with_jitter, "Delay {} should be <= max with jitter {}", delay, max_with_jitter);
+        assert!(
+            delay >= base_delay,
+            "Delay {} should be >= base {}",
+            delay,
+            base_delay
+        );
+        assert!(
+            delay <= max_with_jitter,
+            "Delay {} should be <= max with jitter {}",
+            delay,
+            max_with_jitter
+        );
     }
 }

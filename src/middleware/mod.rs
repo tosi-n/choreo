@@ -438,9 +438,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_logging_middleware_builder() {
-        let mw = LoggingMiddleware::new()
-            .with_inputs()
-            .with_outputs();
+        let mw = LoggingMiddleware::new().with_inputs().with_outputs();
 
         assert!(mw.log_inputs);
         assert!(mw.log_outputs);
@@ -461,34 +459,28 @@ mod tests {
 
     #[tokio::test]
     async fn test_retry_filter_matches_pattern() {
-        let mw = RetryFilterMiddleware::new()
-            .add_non_retryable("validation_error");
+        let mw = RetryFilterMiddleware::new().add_non_retryable("validation_error");
 
-        let run = crate::models::FunctionRun::new(
-            "test-function".to_string(),
-            Uuid::new_v4(),
-            json!({}),
-        );
+        let run =
+            crate::models::FunctionRun::new("test-function".to_string(), Uuid::new_v4(), json!({}));
         let ctx: MiddlewareContext<'_, MemoryStore> = MiddlewareContext {
             run: &run,
             step: None,
             metadata: json!({}),
         };
 
-        let result = mw.after_run_failure(&ctx, "validation error occurred").await;
+        let result = mw
+            .after_run_failure(&ctx, "validation error occurred")
+            .await;
         matches!(result, MiddlewareResult::Fail(_));
     }
 
     #[tokio::test]
     async fn test_retry_filter_no_match() {
-        let mw = RetryFilterMiddleware::new()
-            .add_non_retryable("validation_error");
+        let mw = RetryFilterMiddleware::new().add_non_retryable("validation_error");
 
-        let run = crate::models::FunctionRun::new(
-            "test-function".to_string(),
-            Uuid::new_v4(),
-            json!({}),
-        );
+        let run =
+            crate::models::FunctionRun::new("test-function".to_string(), Uuid::new_v4(), json!({}));
         let ctx: MiddlewareContext<'_, MemoryStore> = MiddlewareContext {
             run: &run,
             step: None,
@@ -532,29 +524,25 @@ mod tests {
     #[tokio::test]
     async fn test_logging_middleware_after_run_success() {
         let mw = LoggingMiddleware::new().with_outputs();
-        let run = crate::models::FunctionRun::new(
-            "test-function".to_string(),
-            Uuid::new_v4(),
-            json!({}),
-        );
+        let run =
+            crate::models::FunctionRun::new("test-function".to_string(), Uuid::new_v4(), json!({}));
         let ctx: MiddlewareContext<'_, MemoryStore> = MiddlewareContext {
             run: &run,
             step: None,
             metadata: json!({}),
         };
 
-        let result = mw.after_run_success(&ctx, &json!({"result": "success"})).await;
+        let result = mw
+            .after_run_success(&ctx, &json!({"result": "success"}))
+            .await;
         matches!(result, MiddlewareResult::Continue);
     }
 
     #[tokio::test]
     async fn test_logging_middleware_after_run_failure() {
         let mw = LoggingMiddleware::new();
-        let run = crate::models::FunctionRun::new(
-            "test-function".to_string(),
-            Uuid::new_v4(),
-            json!({}),
-        );
+        let run =
+            crate::models::FunctionRun::new("test-function".to_string(), Uuid::new_v4(), json!({}));
         let ctx: MiddlewareContext<'_, MemoryStore> = MiddlewareContext {
             run: &run,
             step: None,
@@ -580,11 +568,8 @@ mod tests {
     #[tokio::test]
     async fn test_timeout_middleware_before_run() {
         let mw = TimeoutMiddleware::new(60);
-        let run = crate::models::FunctionRun::new(
-            "test-function".to_string(),
-            Uuid::new_v4(),
-            json!({}),
-        );
+        let run =
+            crate::models::FunctionRun::new("test-function".to_string(), Uuid::new_v4(), json!({}));
         let ctx: MiddlewareContext<'_, MemoryStore> = MiddlewareContext {
             run: &run,
             step: None,
@@ -616,29 +601,25 @@ mod tests {
     #[tokio::test]
     async fn test_middleware_chain_after_run_success() {
         let chain = MiddlewareChain::<MemoryStore>::new();
-        let run = crate::models::FunctionRun::new(
-            "test-function".to_string(),
-            Uuid::new_v4(),
-            json!({}),
-        );
+        let run =
+            crate::models::FunctionRun::new("test-function".to_string(), Uuid::new_v4(), json!({}));
         let ctx: MiddlewareContext<'_, MemoryStore> = MiddlewareContext {
             run: &run,
             step: None,
             metadata: json!({}),
         };
 
-        let result = chain.after_run_success(&ctx, &json!({"success": true})).await;
+        let result = chain
+            .after_run_success(&ctx, &json!({"success": true}))
+            .await;
         matches!(result, MiddlewareResult::Continue);
     }
 
     #[tokio::test]
     async fn test_middleware_chain_after_run_failure() {
         let chain = MiddlewareChain::<MemoryStore>::new();
-        let run = crate::models::FunctionRun::new(
-            "test-function".to_string(),
-            Uuid::new_v4(),
-            json!({}),
-        );
+        let run =
+            crate::models::FunctionRun::new("test-function".to_string(), Uuid::new_v4(), json!({}));
         let ctx: MiddlewareContext<'_, MemoryStore> = MiddlewareContext {
             run: &run,
             step: None,
@@ -677,48 +658,42 @@ mod tests {
             .add_non_retryable("auth")
             .add_non_retryable("permission");
 
-        let run = crate::models::FunctionRun::new(
-            "test-function".to_string(),
-            Uuid::new_v4(),
-            json!({}),
-        );
+        let run =
+            crate::models::FunctionRun::new("test-function".to_string(), Uuid::new_v4(), json!({}));
         let ctx: MiddlewareContext<'_, MemoryStore> = MiddlewareContext {
             run: &run,
             step: None,
             metadata: json!({}),
         };
 
-        let result = mw.after_run_failure(&ctx, "auth error: invalid token").await;
+        let result = mw
+            .after_run_failure(&ctx, "auth error: invalid token")
+            .await;
         matches!(result, MiddlewareResult::Fail(_));
     }
 
     #[tokio::test]
     async fn test_retry_filter_middleware_partial_match() {
-        let mw = RetryFilterMiddleware::new()
-            .add_non_retryable("DB_CONNECTION");
+        let mw = RetryFilterMiddleware::new().add_non_retryable("DB_CONNECTION");
 
-        let run = crate::models::FunctionRun::new(
-            "test-function".to_string(),
-            Uuid::new_v4(),
-            json!({}),
-        );
+        let run =
+            crate::models::FunctionRun::new("test-function".to_string(), Uuid::new_v4(), json!({}));
         let ctx: MiddlewareContext<'_, MemoryStore> = MiddlewareContext {
             run: &run,
             step: None,
             metadata: json!({}),
         };
 
-        let result = mw.after_run_failure(&ctx, "Failed to establish DB_CONNECTION").await;
+        let result = mw
+            .after_run_failure(&ctx, "Failed to establish DB_CONNECTION")
+            .await;
         matches!(result, MiddlewareResult::Fail(_));
     }
 
     #[tokio::test]
     async fn test_middleware_context_with_step() {
-        let run = crate::models::FunctionRun::new(
-            "test-function".to_string(),
-            Uuid::new_v4(),
-            json!({}),
-        );
+        let run =
+            crate::models::FunctionRun::new("test-function".to_string(), Uuid::new_v4(), json!({}));
         let step_ctx = StepContext::new(Uuid::new_v4(), MemoryStore::new());
         let ctx: MiddlewareContext<'_, MemoryStore> = MiddlewareContext {
             run: &run,
@@ -733,11 +708,8 @@ mod tests {
     #[tokio::test]
     async fn test_logging_middleware_step_logging() {
         let mw = LoggingMiddleware::new();
-        let run = crate::models::FunctionRun::new(
-            "test-function".to_string(),
-            Uuid::new_v4(),
-            json!({}),
-        );
+        let run =
+            crate::models::FunctionRun::new("test-function".to_string(), Uuid::new_v4(), json!({}));
         let ctx: MiddlewareContext<'_, MemoryStore> = MiddlewareContext {
             run: &run,
             step: None,

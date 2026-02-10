@@ -287,7 +287,9 @@ impl StateStore for MemoryStore {
     }
 
     async fn get_events_by_name(&self, name: &str, limit: i64, offset: i64) -> Result<Vec<Event>> {
-        let all: Vec<Event> = self.events.iter()
+        let all: Vec<Event> = self
+            .events
+            .iter()
             .filter(|e| e.value().name == name)
             .map(|e| e.clone())
             .collect();
@@ -310,14 +312,23 @@ impl StateStore for MemoryStore {
     }
 
     async fn get_runs_by_event(&self, event_id: Uuid) -> Result<Vec<FunctionRun>> {
-        Ok(self.runs.iter()
+        Ok(self
+            .runs
+            .iter()
             .filter(|r| r.value().event_id == event_id)
             .map(|r| r.clone())
             .collect())
     }
 
-    async fn get_runs_by_function(&self, function_id: &str, limit: i64, offset: i64) -> Result<Vec<FunctionRun>> {
-        let all: Vec<FunctionRun> = self.runs.iter()
+    async fn get_runs_by_function(
+        &self,
+        function_id: &str,
+        limit: i64,
+        offset: i64,
+    ) -> Result<Vec<FunctionRun>> {
+        let all: Vec<FunctionRun> = self
+            .runs
+            .iter()
             .filter(|r| r.value().function_id == function_id)
             .map(|r| r.clone())
             .collect();
@@ -326,7 +337,12 @@ impl StateStore for MemoryStore {
         Ok(all.into_iter().skip(offset).take(limit).collect())
     }
 
-    async fn lease_runs(&self, _worker_id: &str, _limit: i64, _lock_duration_secs: i64) -> Result<Vec<FunctionRun>> {
+    async fn lease_runs(
+        &self,
+        _worker_id: &str,
+        _limit: i64,
+        _lock_duration_secs: i64,
+    ) -> Result<Vec<FunctionRun>> {
         Ok(vec![])
     }
 
@@ -360,7 +376,12 @@ impl StateStore for MemoryStore {
         Ok(())
     }
 
-    async fn extend_run_lock(&self, _id: Uuid, _worker_id: &str, _lock_duration_secs: i64) -> Result<bool> {
+    async fn extend_run_lock(
+        &self,
+        _id: Uuid,
+        _worker_id: &str,
+        _lock_duration_secs: i64,
+    ) -> Result<bool> {
         Ok(true)
     }
 
@@ -382,18 +403,24 @@ impl StateStore for MemoryStore {
     }
 
     async fn get_step(&self, run_id: Uuid, step_id: &str) -> Result<Option<StepRun>> {
-        Ok(self.steps.get(&(run_id, step_id.to_string())).map(|s| s.clone()))
+        Ok(self
+            .steps
+            .get(&(run_id, step_id.to_string()))
+            .map(|s| s.clone()))
     }
 
     async fn get_steps_for_run(&self, run_id: Uuid) -> Result<Vec<StepRun>> {
-        Ok(self.steps.iter()
+        Ok(self
+            .steps
+            .iter()
             .filter(|s| s.key().0 == run_id)
             .map(|s| s.clone())
             .collect())
     }
 
     async fn upsert_step(&self, step: &StepRun) -> Result<()> {
-        self.steps.insert((step.run_id, step.step_id.clone()), step.clone());
+        self.steps
+            .insert((step.run_id, step.step_id.clone()), step.clone());
         Ok(())
     }
 
@@ -405,7 +432,12 @@ impl StateStore for MemoryStore {
         Ok(())
     }
 
-    async fn complete_step(&self, run_id: Uuid, step_id: &str, output: serde_json::Value) -> Result<()> {
+    async fn complete_step(
+        &self,
+        run_id: Uuid,
+        step_id: &str,
+        output: serde_json::Value,
+    ) -> Result<()> {
         if let Some(mut step) = self.steps.get_mut(&(run_id, step_id.to_string())) {
             step.output = Some(output);
             step.status = StepStatus::Completed;
@@ -454,8 +486,13 @@ impl StateStore for MemoryStore {
         Ok(self.locks.get(key).map(|l| l.clone()))
     }
 
-    async fn register_function(&self, function_id: &str, definition: &serde_json::Value) -> Result<()> {
-        self.functions.insert(function_id.to_string(), definition.clone());
+    async fn register_function(
+        &self,
+        function_id: &str,
+        definition: &serde_json::Value,
+    ) -> Result<()> {
+        self.functions
+            .insert(function_id.to_string(), definition.clone());
         Ok(())
     }
 
@@ -516,11 +553,23 @@ mod tests {
     #[tokio::test]
     async fn test_memory_store_get_events_by_name() {
         let store = MemoryStore::new();
-        store.insert_event(&Event::new("user.created".to_string(), json!({}))).await.unwrap();
-        store.insert_event(&Event::new("user.created".to_string(), json!({}))).await.unwrap();
-        store.insert_event(&Event::new("user.deleted".to_string(), json!({}))).await.unwrap();
+        store
+            .insert_event(&Event::new("user.created".to_string(), json!({})))
+            .await
+            .unwrap();
+        store
+            .insert_event(&Event::new("user.created".to_string(), json!({})))
+            .await
+            .unwrap();
+        store
+            .insert_event(&Event::new("user.deleted".to_string(), json!({})))
+            .await
+            .unwrap();
 
-        let events = store.get_events_by_name("user.created", 10, 0).await.unwrap();
+        let events = store
+            .get_events_by_name("user.created", 10, 0)
+            .await
+            .unwrap();
         assert_eq!(events.len(), 2);
     }
 
@@ -541,14 +590,13 @@ mod tests {
     #[tokio::test]
     async fn test_memory_store_update_run_status() {
         let store = MemoryStore::new();
-        let run = FunctionRun::new(
-            "test-function".to_string(),
-            Uuid::new_v4(),
-            json!({}),
-        );
+        let run = FunctionRun::new("test-function".to_string(), Uuid::new_v4(), json!({}));
         store.insert_run(&run).await.unwrap();
 
-        store.update_run_status(run.id, RunStatus::Running).await.unwrap();
+        store
+            .update_run_status(run.id, RunStatus::Running)
+            .await
+            .unwrap();
         let updated = store.get_run(run.id).await.unwrap().unwrap();
         assert_eq!(updated.status, RunStatus::Running);
     }
@@ -557,8 +605,14 @@ mod tests {
     async fn test_memory_store_list_runs() {
         let store = MemoryStore::new();
         let event_id = Uuid::new_v4();
-        store.insert_run(&FunctionRun::new("func1".to_string(), event_id, json!({}))).await.unwrap();
-        store.insert_run(&FunctionRun::new("func1".to_string(), event_id, json!({}))).await.unwrap();
+        store
+            .insert_run(&FunctionRun::new("func1".to_string(), event_id, json!({})))
+            .await
+            .unwrap();
+        store
+            .insert_run(&FunctionRun::new("func1".to_string(), event_id, json!({})))
+            .await
+            .unwrap();
 
         let runs = store.get_runs_by_function("func1", 10, 0).await.unwrap();
         assert_eq!(runs.len(), 2);
@@ -583,13 +637,21 @@ mod tests {
         let step = StepRun::new(run_id, "step-to-update");
 
         store.upsert_step(&step).await.unwrap();
-        assert!(store.get_step(run_id, "step-to-update").await.unwrap().is_some());
+        assert!(store
+            .get_step(run_id, "step-to-update")
+            .await
+            .unwrap()
+            .is_some());
 
         let mut updated_step = step.clone();
         updated_step.status = StepStatus::Running;
         store.upsert_step(&updated_step).await.unwrap();
 
-        let retrieved = store.get_step(run_id, "step-to-update").await.unwrap().unwrap();
+        let retrieved = store
+            .get_step(run_id, "step-to-update")
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(retrieved.status, StepStatus::Running);
     }
 
@@ -600,11 +662,16 @@ mod tests {
         let step = StepRun::new(run_id, "step-to-complete");
         store.upsert_step(&step).await.unwrap();
 
-        store.complete_step(run_id, "step-to-complete", json!({"result": "success"}))
+        store
+            .complete_step(run_id, "step-to-complete", json!({"result": "success"}))
             .await
             .unwrap();
 
-        let retrieved = store.get_step(run_id, "step-to-complete").await.unwrap().unwrap();
+        let retrieved = store
+            .get_step(run_id, "step-to-complete")
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(retrieved.status, StepStatus::Completed);
         assert_eq!(retrieved.output, Some(json!({"result": "success"})));
     }
@@ -616,11 +683,16 @@ mod tests {
         let step = StepRun::new(run_id, "failing-step");
         store.upsert_step(&step).await.unwrap();
 
-        store.fail_step(run_id, "failing-step", "something went wrong")
+        store
+            .fail_step(run_id, "failing-step", "something went wrong")
             .await
             .unwrap();
 
-        let retrieved = store.get_step(run_id, "failing-step").await.unwrap().unwrap();
+        let retrieved = store
+            .get_step(run_id, "failing-step")
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(retrieved.status, StepStatus::Failed);
     }
 
@@ -628,9 +700,18 @@ mod tests {
     async fn test_memory_store_get_steps_for_run() {
         let store = MemoryStore::new();
         let run_id = Uuid::new_v4();
-        store.upsert_step(&StepRun::new(run_id, "step1")).await.unwrap();
-        store.upsert_step(&StepRun::new(run_id, "step2")).await.unwrap();
-        store.upsert_step(&StepRun::new(Uuid::new_v4(), "other-step")).await.unwrap();
+        store
+            .upsert_step(&StepRun::new(run_id, "step1"))
+            .await
+            .unwrap();
+        store
+            .upsert_step(&StepRun::new(run_id, "step2"))
+            .await
+            .unwrap();
+        store
+            .upsert_step(&StepRun::new(Uuid::new_v4(), "other-step"))
+            .await
+            .unwrap();
 
         let steps = store.get_steps_for_run(run_id).await.unwrap();
         assert_eq!(steps.len(), 2);
@@ -639,7 +720,10 @@ mod tests {
     #[tokio::test]
     async fn test_memory_store_acquire_lock() {
         let store = MemoryStore::new();
-        let lock = store.try_acquire_lock("test-lock", "worker-1", 30).await.unwrap();
+        let lock = store
+            .try_acquire_lock("test-lock", "worker-1", 30)
+            .await
+            .unwrap();
         assert!(lock);
         assert!(store.get_lock("test-lock").await.unwrap().is_some());
     }
@@ -647,23 +731,38 @@ mod tests {
     #[tokio::test]
     async fn test_memory_store_lock_contention() {
         let store = MemoryStore::new();
-        let _lock1 = store.try_acquire_lock("contested-lock", "worker-1", 30).await.unwrap();
-        let lock2 = store.try_acquire_lock("contested-lock", "worker-2", 30).await.unwrap();
+        let _lock1 = store
+            .try_acquire_lock("contested-lock", "worker-1", 30)
+            .await
+            .unwrap();
+        let lock2 = store
+            .try_acquire_lock("contested-lock", "worker-2", 30)
+            .await
+            .unwrap();
         assert!(!lock2);
     }
 
     #[tokio::test]
     async fn test_memory_store_extend_lock() {
         let store = MemoryStore::new();
-        store.try_acquire_lock("extendable-lock", "worker-1", 10).await.unwrap();
-        let extended = store.extend_lock("extendable-lock", "worker-1", 30).await.unwrap();
+        store
+            .try_acquire_lock("extendable-lock", "worker-1", 10)
+            .await
+            .unwrap();
+        let extended = store
+            .extend_lock("extendable-lock", "worker-1", 30)
+            .await
+            .unwrap();
         assert!(extended);
     }
 
     #[tokio::test]
     async fn test_memory_store_release_lock() {
         let store = MemoryStore::new();
-        store.try_acquire_lock("release-me", "worker-1", 30).await.unwrap();
+        store
+            .try_acquire_lock("release-me", "worker-1", 30)
+            .await
+            .unwrap();
         let released = store.release_lock("release-me", "worker-1").await.unwrap();
         assert!(released);
         assert!(store.get_lock("release-me").await.unwrap().is_none());
@@ -672,7 +771,10 @@ mod tests {
     #[tokio::test]
     async fn test_memory_store_release_lock_wrong_owner() {
         let store = MemoryStore::new();
-        store.try_acquire_lock("locked", "worker-1", 30).await.unwrap();
+        store
+            .try_acquire_lock("locked", "worker-1", 30)
+            .await
+            .unwrap();
         let released = store.release_lock("locked", "worker-2").await.unwrap();
         assert!(!released);
     }
@@ -681,7 +783,10 @@ mod tests {
     async fn test_memory_store_register_function() {
         let store = MemoryStore::new();
         let definition = json!({"name": "test", "steps": []});
-        store.register_function("test-function", &definition).await.unwrap();
+        store
+            .register_function("test-function", &definition)
+            .await
+            .unwrap();
         let retrieved = store.get_function("test-function").await.unwrap();
         assert!(retrieved.is_some());
         assert_eq!(retrieved.unwrap()["name"], "test");
@@ -701,7 +806,9 @@ mod tests {
     async fn test_memory_store_check_idempotency_key() {
         let store = MemoryStore::new();
         let run_id = Uuid::new_v4();
-        store.idempotency_keys.insert("idemp-key".to_string(), run_id);
+        store
+            .idempotency_keys
+            .insert("idemp-key".to_string(), run_id);
 
         let retrieved = store.check_idempotency_key("idemp-key").await.unwrap();
         assert!(retrieved.is_some());
@@ -758,7 +865,10 @@ mod tests {
     async fn test_state_store_ext_process_event() {
         let store = MemoryStore::new();
         let event = Event::new("test.event".to_string(), json!({"key": "value"}));
-        let run_ids = store.process_event(event, &["func1".to_string(), "func2".to_string()]).await.unwrap();
+        let run_ids = store
+            .process_event(event, &["func1".to_string(), "func2".to_string()])
+            .await
+            .unwrap();
         assert_eq!(run_ids.len(), 2);
     }
 }

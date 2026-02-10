@@ -635,7 +635,10 @@ mod tests {
             }],
             retries: Some(RetryConfig { max_attempts: 3 }),
             timeout_secs: Some(300),
-            concurrency: Some(ConcurrencyConfig { limit: 10, key: None }),
+            concurrency: Some(ConcurrencyConfig {
+                limit: 10,
+                key: None,
+            }),
             throttle: None,
             debounce: None,
             priority: Some(1),

@@ -264,7 +264,7 @@ fn parse_field(field: &str) -> std::result::Result<CronField, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::{Utc, TimeZone, Timelike};
+    use chrono::{TimeZone, Timelike, Utc};
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -281,21 +281,26 @@ mod tests {
 
         for (expr, description) in test_cases {
             let result = parse_cron(expr);
-            assert!(result.is_ok(), "Failed to parse '{}' ({})", expr, description);
+            assert!(
+                result.is_ok(),
+                "Failed to parse '{}' ({})",
+                expr,
+                description
+            );
         }
     }
 
     #[test]
     fn test_parse_invalid_cron_expressions() {
-        let invalid_expressions = vec![
-            "* * *",
-            "* * * * * *",
-            "abc * * * *",
-        ];
+        let invalid_expressions = vec!["* * *", "* * * * * *", "abc * * * *"];
 
         for expr in invalid_expressions {
             let result = parse_cron(expr);
-            assert!(result.is_err(), "Should reject invalid expression: {}", expr);
+            assert!(
+                result.is_err(),
+                "Should reject invalid expression: {}",
+                expr
+            );
         }
     }
 

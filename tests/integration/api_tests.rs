@@ -23,7 +23,7 @@ fn create_test_router() -> Router {
 #[tokio::test]
 async fn test_health_endpoint() {
     let router = create_test_router();
-    
+
     let response = router
         .clone()
         .oneshot(
@@ -34,14 +34,14 @@ async fn test_health_endpoint() {
         )
         .await
         .unwrap();
-    
+
     assert_eq!(response.status(), StatusCode::OK);
 }
 
 #[tokio::test]
 async fn test_list_functions_empty() {
     let router = create_test_router();
-    
+
     let response = router
         .clone()
         .oneshot(
@@ -52,14 +52,14 @@ async fn test_list_functions_empty() {
         )
         .await
         .unwrap();
-    
+
     assert_eq!(response.status(), StatusCode::OK);
 }
 
 #[tokio::test]
 async fn test_get_nonexistent_event() {
     let router = create_test_router();
-    
+
     let response = router
         .clone()
         .oneshot(
@@ -70,14 +70,14 @@ async fn test_get_nonexistent_event() {
         )
         .await
         .unwrap();
-    
+
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
 }
 
 #[tokio::test]
 async fn test_get_nonexistent_run() {
     let router = create_test_router();
-    
+
     let response = router
         .clone()
         .oneshot(
@@ -88,14 +88,14 @@ async fn test_get_nonexistent_run() {
         )
         .await
         .unwrap();
-    
+
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
 }
 
 #[tokio::test]
 async fn test_cancel_nonexistent_run() {
     let router = create_test_router();
-    
+
     let response = router
         .clone()
         .oneshot(
@@ -107,18 +107,18 @@ async fn test_cancel_nonexistent_run() {
         )
         .await
         .unwrap();
-    
+
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
 }
 
 #[tokio::test]
 async fn test_complete_nonexistent_run() {
     let router = create_test_router();
-    
+
     let request_body = json!({
         "output": {"result": "success"}
     });
-    
+
     let response = router
         .clone()
         .oneshot(
@@ -131,19 +131,19 @@ async fn test_complete_nonexistent_run() {
         )
         .await
         .unwrap();
-    
+
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
 }
 
 #[tokio::test]
 async fn test_fail_nonexistent_run() {
     let router = create_test_router();
-    
+
     let request_body = json!({
         "error": "something went wrong",
         "should_retry": false
     });
-    
+
     let response = router
         .clone()
         .oneshot(
@@ -156,14 +156,14 @@ async fn test_fail_nonexistent_run() {
         )
         .await
         .unwrap();
-    
+
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
 }
 
 #[tokio::test]
 async fn test_get_run_steps_nonexistent() {
     let router = create_test_router();
-    
+
     let response = router
         .clone()
         .oneshot(
@@ -174,18 +174,18 @@ async fn test_get_run_steps_nonexistent() {
         )
         .await
         .unwrap();
-    
+
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
 }
 
 #[tokio::test]
 async fn test_save_step_nonexistent_run() {
     let router = create_test_router();
-    
+
     let request_body = json!({
         "output": {"result": "step complete"}
     });
-    
+
     let response = router
         .clone()
         .oneshot(
@@ -198,20 +198,20 @@ async fn test_save_step_nonexistent_run() {
         )
         .await
         .unwrap();
-    
+
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
 }
 
 #[tokio::test]
 async fn test_lease_runs() {
     let router = create_test_router();
-    
+
     let request_body = json!({
         "worker_id": "test-worker",
         "limit": 10,
         "lease_duration_secs": 300
     });
-    
+
     let response = router
         .clone()
         .oneshot(
@@ -224,19 +224,19 @@ async fn test_lease_runs() {
         )
         .await
         .unwrap();
-    
+
     assert_eq!(response.status(), StatusCode::OK);
 }
 
 #[tokio::test]
 async fn test_worker_heartbeat() {
     let router = create_test_router();
-    
+
     let request_body = json!({
         "worker_id": "test-worker",
         "run_ids": []
     });
-    
+
     let response = router
         .clone()
         .oneshot(
@@ -249,14 +249,14 @@ async fn test_worker_heartbeat() {
         )
         .await
         .unwrap();
-    
+
     assert_eq!(response.status(), StatusCode::OK);
 }
 
 #[tokio::test]
 async fn test_api_routes_exist() {
     let router = create_test_router();
-    
+
     let routes = [
         "/events",
         "/health",
@@ -264,27 +264,27 @@ async fn test_api_routes_exist() {
         "/worker/lease-runs",
         "/worker/heartbeat",
     ];
-    
+
     for route in routes {
         let response = router
             .clone()
-            .oneshot(
-                Request::builder()
-                    .uri(route)
-                    .body(Body::empty())
-                    .unwrap(),
-            )
+            .oneshot(Request::builder().uri(route).body(Body::empty()).unwrap())
             .await
             .unwrap();
-        
-        assert_ne!(response.status(), StatusCode::NOT_FOUND, "Route {} should exist", route);
+
+        assert_ne!(
+            response.status(),
+            StatusCode::NOT_FOUND,
+            "Route {} should exist",
+            route
+        );
     }
 }
 
 #[tokio::test]
 async fn test_api_error_handling() {
     let router = create_test_router();
-    
+
     let response = router
         .clone()
         .oneshot(
@@ -295,14 +295,14 @@ async fn test_api_error_handling() {
         )
         .await
         .unwrap();
-    
+
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
 }
 
 #[tokio::test]
 async fn test_register_functions() {
     let router = create_test_router();
-    
+
     let request_body = json!({
         "functions": [
             {
@@ -320,7 +320,7 @@ async fn test_register_functions() {
             }
         ]
     });
-    
+
     let response = router
         .clone()
         .oneshot(
@@ -333,7 +333,7 @@ async fn test_register_functions() {
         )
         .await
         .unwrap();
-    
+
     assert_eq!(response.status(), StatusCode::OK);
 }
 
@@ -346,8 +346,14 @@ async fn test_app_state_creation() {
 #[tokio::test]
 async fn test_memory_store_in_api_context() {
     let store = MemoryStore::new();
-    store.insert_event(&choreo::models::Event::new("test.event".to_string(), json!({"key": "value"}))).await.unwrap();
-    
+    store
+        .insert_event(&choreo::models::Event::new(
+            "test.event".to_string(),
+            json!({"key": "value"}),
+        ))
+        .await
+        .unwrap();
+
     let events = store.get_events_by_name("test.event", 10, 0).await.unwrap();
     assert_eq!(events.len(), 1);
 }
@@ -355,14 +361,14 @@ async fn test_memory_store_in_api_context() {
 #[tokio::test]
 async fn test_send_event_with_idempotency_key() {
     let router = create_test_router();
-    
+
     let request_body = json!({
         "name": "test.event",
         "data": {"key": "value"},
         "idempotency_key": "unique-key-123",
         "user_id": None::<String>
     });
-    
+
     let response = router
         .clone()
         .oneshot(
@@ -375,6 +381,6 @@ async fn test_send_event_with_idempotency_key() {
         )
         .await
         .unwrap();
-    
+
     assert_eq!(response.status(), StatusCode::OK);
 }
