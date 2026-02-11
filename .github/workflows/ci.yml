@@ -64,27 +64,27 @@ jobs:
         run: cargo test --features sqlite --lib --bins -- --test-threads=4
 
       - name: Integration Tests (SQLite)
-        run: cargo test --features sqlite --test 'integration/storage_tests' -- --test-threads=4
+        run: cargo test --features sqlite --test storage_tests -- --test-threads=4
 
       - name: Integration Tests (PostgreSQL)
         run: |
           export DATABASE_URL=postgres://postgres:postgres@localhost:5432/choreo_test
-          cargo test --features postgres --test 'integration/storage_tests' -- --test-threads=4 || echo "PostgreSQL tests require real DB setup"
+          cargo test --features postgres --test storage_tests -- --test-threads=4 || echo "PostgreSQL tests require real DB setup"
 
       - name: API Integration Tests
-        run: cargo test --features sqlite --test 'integration/api_tests' -- --test-threads=4
+        run: cargo test --features sqlite --test api_tests -- --test-threads=4
 
       - name: Metrics Integration Tests
-        run: cargo test --features sqlite --test 'integration/metrics_tests' -- --test-threads=4
+        run: cargo test --features sqlite --test metrics_tests -- --test-threads=4
 
       - name: Executor Tests
-        run: cargo test --features sqlite --test 'integration/executor_tests' -- --test-threads=4
+        run: cargo test --features sqlite --test executor_tests -- --test-threads=4
 
       - name: Concurrency Tests
-        run: cargo test --features sqlite --test 'integration/concurrency_tests' -- --test-threads=4
+        run: cargo test --features sqlite --test concurrency_tests -- --test-threads=4
 
       - name: Registry Tests
-        run: cargo test --features sqlite --test 'integration/registry_tests' -- --test-threads=4
+        run: cargo test --features sqlite --test registry_tests -- --test-threads=4
 
       - name: Benchmarks
         run: cargo bench -- --test-threads=1 2>&1 | head -50 || echo "Benchmarks completed"
