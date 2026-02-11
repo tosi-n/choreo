@@ -13,6 +13,7 @@ import httpx
 
 from .event import Event, EventContext
 from .function import FunctionDef, FunctionRegistry
+from .runtime import WorkerLoop, WorkerLoopConfig, WorkerLoopHooks
 from .run import FunctionRun
 from .step import StepContext
 
@@ -28,6 +29,8 @@ class ChoreoConfig:
     poll_interval: float = 1.0
     batch_size: int = 10
     max_concurrent: int = 10
+    lease_duration_secs: int = 300
+    heartbeat_interval_secs: int = 60
     timeout: float = 30.0
 
 
@@ -310,7 +313,7 @@ class Choreo:
             raise RuntimeError("Server URL not configured")
         return ChoreoClient(self.config.server_url, self.config.timeout)
 
-    async def start_worker(self) -> None:
+    async def start_worker(self, hooks: Optional[WorkerLoopHooks] = None) -> None:
         """
         Start a worker to process function runs.
 
@@ -322,57 +325,21 @@ class Choreo:
         # Register functions with server
         await self._register_functions()
 
-        # Start heartbeat task
-        heartbeat_task = asyncio.create_task(self._heartbeat_loop(worker_id))
-        active_run_ids: List[UUID] = []
-
-        try:
-            while not self._shutdown.is_set():
-                try:
-                    async with self._get_client() as client:
-                        # Lease pending runs
-                        leased_runs = await client.lease_runs(
-                            worker_id=worker_id,
-                            limit=self.config.batch_size,
-                            lease_duration_secs=300,
-                        )
-
-                        if not leased_runs:
-                            await asyncio.sleep(self.config.poll_interval)
-                            continue
-
-                        logger.info(f"Leased {len(leased_runs)} runs")
-
-                        # Process each run
-                        for run_data in leased_runs:
-                            run_id = UUID(run_data["id"])
-                            active_run_ids.append(run_id)
-
-                            try:
-                                await self._execute_run(client, run_data)
-                                logger.info(f"Run {run_id} completed")
-                            except Exception as e:
-                                logger.error(f"Run {run_id} failed: {e}", exc_info=True)
-                                await client.fail_run(
-                                    run_id,
-                                    str(e),
-                                    should_retry=run_data["attempt"] < run_data["max_attempts"],
-                                )
-                            finally:
-                                if run_id in active_run_ids:
-                                    active_run_ids.remove(run_id)
-
-                except asyncio.CancelledError:
-                    break
-                except Exception as e:
-                    logger.error(f"Worker loop error: {e}")
-                    await asyncio.sleep(1)
-        finally:
-            heartbeat_task.cancel()
-            try:
-                await heartbeat_task
-            except asyncio.CancelledError:
-                pass
+        runtime = WorkerLoop(
+            config=WorkerLoopConfig(
+                worker_id=worker_id,
+                poll_interval=self.config.poll_interval,
+                batch_size=self.config.batch_size,
+                max_concurrent=self.config.max_concurrent,
+                lease_duration_secs=self.config.lease_duration_secs,
+                heartbeat_interval_secs=self.config.heartbeat_interval_secs,
+            ),
+            client_factory=self._get_client,
+            execute_run=self._execute_run,
+            shutdown_event=self._shutdown,
+            hooks=hooks,
+        )
+        await runtime.run()
 
         logger.info("Choreo worker stopped")
 
@@ -423,14 +390,6 @@ class Choreo:
         output = result if isinstance(result, dict) else {"result": result}
         await client.complete_run(run_id, output)
         logger.info(f"Completed run {run_id}")
-
-    async def _heartbeat_loop(self, worker_id: str) -> None:
-        """Send periodic heartbeats to extend run leases"""
-        while True:
-            try:
-                await asyncio.sleep(60)  # Heartbeat every minute
-            except asyncio.CancelledError:
-                break
 
     async def _register_functions(self) -> None:
         """Register all functions with the server"""
