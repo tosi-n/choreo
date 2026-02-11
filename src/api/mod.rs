@@ -300,7 +300,10 @@ async fn send_event<S: StateStore>(
 
     for func_json in &matching_functions {
         if let Some(function_id) = func_json.get("id").and_then(|v| v.as_str()) {
-            let run = FunctionRun::new(function_id.to_string(), event.id, event.data.clone());
+            let mut run = FunctionRun::new(function_id.to_string(), event.id, event.data.clone());
+            if let Some(max_attempts) = function_retry_max_attempts(func_json) {
+                run = run.with_max_attempts(max_attempts);
+            }
             state.store.insert_run(&run).await?;
             tracing::info!(
                 event_name = %event.name,
@@ -316,6 +319,15 @@ async fn send_event<S: StateStore>(
         event_id: event.id,
         run_ids,
     }))
+}
+
+fn function_retry_max_attempts(function_def: &serde_json::Value) -> Option<i32> {
+    function_def
+        .get("retries")
+        .and_then(|v| v.get("max_attempts"))
+        .and_then(|v| v.as_i64())
+        .and_then(|v| i32::try_from(v).ok())
+        .filter(|v| *v > 0)
 }
 
 async fn get_event<S: StateStore>(
