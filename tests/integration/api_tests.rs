@@ -3,19 +3,26 @@
 //! These tests verify the API router configuration and basic HTTP handling.
 
 use axum::{
-    body::Body,
+    body::{to_bytes, Body},
     http::{Request, StatusCode},
-    routing::post,
     Router,
 };
 use choreo::api::AppState;
 use choreo::storage::{MemoryStore, StateStore};
+use choreo::SqliteStore;
 use serde_json::json;
 use std::sync::Arc;
 use tower::ServiceExt;
 
 fn create_test_router() -> Router {
     let store = MemoryStore::new();
+    let state = Arc::new(AppState { store });
+    choreo::api::router(state)
+}
+
+async fn create_sqlite_test_router() -> Router {
+    let store = SqliteStore::in_memory().await.unwrap();
+    store.migrate().await.unwrap();
     let state = Arc::new(AppState { store });
     choreo::api::router(state)
 }
@@ -383,4 +390,84 @@ async fn test_send_event_with_idempotency_key() {
         .unwrap();
 
     assert_eq!(response.status(), StatusCode::OK);
+}
+
+#[tokio::test]
+async fn test_send_event_uses_function_retry_max_attempts() {
+    let router = create_sqlite_test_router().await;
+
+    let register_body = json!({
+        "functions": [
+            {
+                "id": "retry-function",
+                "name": "Retry Function",
+                "triggers": [
+                    {"type": "event", "name": "retry.event"}
+                ],
+                "retries": {"max_attempts": 7},
+                "timeout_secs": 300,
+                "concurrency": null,
+                "throttle": null,
+                "debounce": null,
+                "priority": 0
+            }
+        ]
+    });
+
+    let register_response = router
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/functions")
+                .method("POST")
+                .header("content-type", "application/json")
+                .body(Body::from(register_body.to_string()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(register_response.status(), StatusCode::OK);
+
+    let send_event_body = json!({
+        "name": "retry.event",
+        "data": {"order_id": "ord_123"}
+    });
+
+    let send_response = router
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/events")
+                .method("POST")
+                .header("content-type", "application/json")
+                .body(Body::from(send_event_body.to_string()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(send_response.status(), StatusCode::OK);
+    let send_body = to_bytes(send_response.into_body(), usize::MAX).await.unwrap();
+    let send_json: serde_json::Value = serde_json::from_slice(&send_body).unwrap();
+
+    let run_ids = send_json["run_ids"].as_array().unwrap();
+    assert_eq!(run_ids.len(), 1);
+    let run_id = run_ids[0].as_str().unwrap();
+
+    let run_response = router
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri(format!("/runs/{}", run_id))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(run_response.status(), StatusCode::OK);
+    let run_body = to_bytes(run_response.into_body(), usize::MAX).await.unwrap();
+    let run_json: serde_json::Value = serde_json::from_slice(&run_body).unwrap();
+    assert_eq!(run_json["max_attempts"], 7);
 }
