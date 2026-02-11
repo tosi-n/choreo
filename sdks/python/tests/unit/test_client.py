@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
 from choreo.client import Choreo, ChoreoClient, ChoreoConfig
 from choreo.event import Event, EventContext
 from choreo.function import FunctionDef, FunctionRegistry, TriggerDef
+from choreo.runtime import WorkerLoopHooks
 from choreo.run import FunctionRun, RunStatus
 from choreo.step import StepContext, StepError
 
@@ -602,10 +603,12 @@ class TestChoreoConfig:
         config = ChoreoConfig()
 
         assert config.server_url is None
-        config.worker_id is None
+        assert config.worker_id is None
         assert config.poll_interval == 1.0
         assert config.batch_size == 10
         assert config.max_concurrent == 10
+        assert config.lease_duration_secs == 300
+        assert config.heartbeat_interval_secs == 60
         assert config.timeout == 30.0
 
     def test_custom_config(self):
@@ -615,12 +618,16 @@ class TestChoreoConfig:
             worker_id="test-worker",
             poll_interval=2.0,
             batch_size=20,
+            lease_duration_secs=120,
+            heartbeat_interval_secs=30,
             timeout=60.0,
         )
 
         assert config.server_url == "http://localhost:8080"
         assert config.worker_id == "test-worker"
         assert config.poll_interval == 2.0
+        assert config.lease_duration_secs == 120
+        assert config.heartbeat_interval_secs == 30
 
 
 class TestChoreoClient:
@@ -792,3 +799,43 @@ class TestChoreo:
         assert definition.throttle_limit == 100
         assert definition.throttle_period == 60
         assert definition.debounce_period == 5
+
+    @pytest.mark.asyncio
+    async def test_start_worker_uses_runtime_worker_loop(self):
+        """Test worker startup delegates execution to runtime worker loop."""
+        choreo = Choreo(
+            config=ChoreoConfig(
+                server_url="http://localhost:8080",
+                worker_id="worker-test",
+                poll_interval=2.5,
+                batch_size=4,
+                max_concurrent=3,
+                lease_duration_secs=90,
+                heartbeat_interval_secs=45,
+            )
+        )
+
+        choreo._register_functions = AsyncMock()
+        hooks = WorkerLoopHooks()
+
+        with patch("choreo.client.WorkerLoop") as mock_loop_class:
+            mock_loop = MagicMock()
+            mock_loop.run = AsyncMock()
+            mock_loop_class.return_value = mock_loop
+
+            await choreo.start_worker(hooks=hooks)
+
+            choreo._register_functions.assert_awaited_once()
+            mock_loop_class.assert_called_once()
+            args, kwargs = mock_loop_class.call_args
+            assert not args
+            runtime_config = kwargs["config"]
+            assert runtime_config.worker_id == "worker-test"
+            assert runtime_config.poll_interval == 2.5
+            assert runtime_config.batch_size == 4
+            assert runtime_config.max_concurrent == 3
+            assert runtime_config.lease_duration_secs == 90
+            assert runtime_config.heartbeat_interval_secs == 45
+            assert kwargs["hooks"] is hooks
+            assert kwargs["shutdown_event"] is choreo._shutdown
+            mock_loop.run.assert_awaited_once()
