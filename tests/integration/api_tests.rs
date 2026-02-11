@@ -448,7 +448,9 @@ async fn test_send_event_uses_function_retry_max_attempts() {
         .unwrap();
 
     assert_eq!(send_response.status(), StatusCode::OK);
-    let send_body = to_bytes(send_response.into_body(), usize::MAX).await.unwrap();
+    let send_body = to_bytes(send_response.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let send_json: serde_json::Value = serde_json::from_slice(&send_body).unwrap();
 
     let run_ids = send_json["run_ids"].as_array().unwrap();
@@ -467,7 +469,9 @@ async fn test_send_event_uses_function_retry_max_attempts() {
         .unwrap();
 
     assert_eq!(run_response.status(), StatusCode::OK);
-    let run_body = to_bytes(run_response.into_body(), usize::MAX).await.unwrap();
+    let run_body = to_bytes(run_response.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let run_json: serde_json::Value = serde_json::from_slice(&run_body).unwrap();
     assert_eq!(run_json["max_attempts"], 7);
 }
