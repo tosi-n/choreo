@@ -6,6 +6,7 @@ Durable workflow orchestration built in Rust.
 
 - **Durable Execution**: Step-level checkpoints that survive crashes
 - **Event-Driven**: Functions triggered by events with fan-out capability
+- **Worker Runtime Hooks**: Observe lease/execution lifecycle with SDK hooks
 - **Concurrency Control**: Global and per-key limits
 - **Scheduling**: Cron expressions, throttling, and debouncing
 - **Priority Queues**: Process important work first
@@ -93,6 +94,52 @@ async def process_order(ctx, step):
 # Start worker
 await choreo.start_worker()
 ```
+
+### 2.1 Worker Runtime Abstraction (General Use Cases)
+
+The Python SDK worker now uses a runtime loop abstraction with:
+- active-run tracking
+- real lease heartbeat extensions (`/worker/heartbeat`)
+- concurrent run execution up to `max_concurrent`
+- lifecycle hooks for observability/policy extensions
+
+Use this when you want reliability primitives shared across different worker stacks.
+
+```python
+from choreo import Choreo, ChoreoConfig, WorkerLoopHooks
+
+choreo = Choreo(
+    config=ChoreoConfig(
+        server_url="http://localhost:8080",
+        worker_id="orders-worker",
+        poll_interval=1.0,
+        batch_size=20,
+        max_concurrent=10,
+        lease_duration_secs=300,
+        heartbeat_interval_secs=60,
+    )
+)
+
+class Hooks(WorkerLoopHooks):
+    async def before_lease(self, context):
+        print(f"leasing up to {context.requested_limit}")
+
+    async def after_lease(self, context):
+        print(f"leased {len(context.leased_runs)} runs")
+
+    async def on_run_error(self, run_data, error):
+        print(f"run {run_data.get('id')} failed: {error}")
+
+await choreo.start_worker(hooks=Hooks())
+```
+
+### 2.2 Retry Semantics for Event-Created Runs
+
+When `/events` creates function runs, Choreo now applies the function's retry policy (`retries.max_attempts`) to `run.max_attempts` at creation time.
+
+Example:
+- function registered with `retries.max_attempts = 7`
+- run created from matching event starts with `max_attempts = 7`
 
 ### 3. Send Events
 
