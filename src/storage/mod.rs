@@ -469,11 +469,16 @@ impl StateStore for MemoryStore {
     }
 
     async fn release_lock(&self, key: &str, holder: &str) -> Result<bool> {
-        if let Some(lock) = self.locks.get(key) {
-            if lock.holder == holder {
-                self.locks.remove(key);
-                return Ok(true);
-            }
+        // Avoid holding a map guard while calling remove on the same key.
+        // DashMap can deadlock when mutating a shard while a read guard is alive.
+        let can_release = self
+            .locks
+            .get(key)
+            .map(|lock| lock.holder == holder)
+            .unwrap_or(false);
+        if can_release {
+            self.locks.remove(key);
+            return Ok(true);
         }
         Ok(false)
     }
