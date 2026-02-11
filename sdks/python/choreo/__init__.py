@@ -19,6 +19,7 @@ Usage:
 from .client import Choreo, ChoreoClient, ChoreoConfig
 from .event import Event, EventContext
 from .function import FunctionDef, TriggerDef, function
+from .runtime import RunExecutionResult, WorkerLeaseContext, WorkerLoopConfig, WorkerLoopHooks
 from .run import FunctionRun, RunStatus
 from .step import StepContext, StepError
 
@@ -36,4 +37,8 @@ __all__ = [
     "EventContext",
     "FunctionRun",
     "RunStatus",
+    "RunExecutionResult",
+    "WorkerLeaseContext",
+    "WorkerLoopConfig",
+    "WorkerLoopHooks",
 ]
