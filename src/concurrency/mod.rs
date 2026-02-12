@@ -306,12 +306,8 @@ impl ConcurrencyManager {
 fn update_peak(peak: &AtomicUsize, active: usize) {
     let mut current_peak = peak.load(Ordering::Relaxed);
     while active > current_peak {
-        match peak.compare_exchange_weak(
-            current_peak,
-            active,
-            Ordering::Relaxed,
-            Ordering::Relaxed,
-        ) {
+        match peak.compare_exchange_weak(current_peak, active, Ordering::Relaxed, Ordering::Relaxed)
+        {
             Ok(_) => break,
             Err(next_peak) => current_peak = next_peak,
         }
