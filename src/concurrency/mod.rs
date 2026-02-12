@@ -47,7 +47,7 @@ pub struct ConcurrencyManager {
     /// Per-key active counts
     key_active: Arc<DashMap<String, AtomicUsize>>,
     /// Metrics
-    metrics: ConcurrencyMetrics,
+    metrics: Arc<ConcurrencyMetrics>,
 }
 
 /// Concurrency metrics
@@ -91,6 +91,7 @@ pub struct ConcurrencyPermit {
     _key_permit: Option<OwnedSemaphorePermit>,
     key: Option<String>,
     key_active: Arc<DashMap<String, AtomicUsize>>,
+    metrics: Arc<ConcurrencyMetrics>,
 }
 
 impl Drop for ConcurrencyPermit {
@@ -98,9 +99,13 @@ impl Drop for ConcurrencyPermit {
         // Decrement key active count
         if let Some(key) = &self.key {
             if let Some(counter) = self.key_active.get(key) {
-                counter.fetch_sub(1, Ordering::Relaxed);
+                let _ = counter.fetch_update(Ordering::Relaxed, Ordering::Relaxed, |count| {
+                    count.checked_sub(1)
+                });
             }
         }
+        decrement_active(&self.metrics.active);
+        self.metrics.releases.fetch_add(1, Ordering::Relaxed);
         debug!(key = ?self.key, "Released concurrency permit");
     }
 }
@@ -125,7 +130,7 @@ impl ConcurrencyManager {
             global_semaphore: Arc::new(Semaphore::new(config.global_limit)),
             key_semaphores: Arc::new(DashMap::new()),
             key_active: Arc::new(DashMap::new()),
-            metrics: ConcurrencyMetrics::default(),
+            metrics: Arc::new(ConcurrencyMetrics::default()),
             config,
         }
     }
@@ -151,13 +156,13 @@ impl ConcurrencyManager {
         {
             Ok(Ok(permit)) => permit,
             Ok(Err(_)) => {
-                self.metrics.rejections.fetch_add(1, Ordering::Relaxed);
+                self.record_rejection();
                 return Err(ConcurrencyError::QueueFull(
                     self.config.global_limit - self.global_semaphore.available_permits(),
                 ));
             }
             Err(_) => {
-                self.metrics.timeouts.fetch_add(1, Ordering::Relaxed);
+                self.record_timeout();
                 return Err(ConcurrencyError::Timeout(timeout));
             }
         };
@@ -180,10 +185,11 @@ impl ConcurrencyManager {
                     (Some(k.to_string()), Some(permit))
                 }
                 Ok(Err(_)) => {
+                    self.record_rejection();
                     return Err(ConcurrencyError::KeyLimitReached(k.to_string()));
                 }
                 Err(_) => {
-                    self.metrics.timeouts.fetch_add(1, Ordering::Relaxed);
+                    self.record_timeout();
                     return Err(ConcurrencyError::Timeout(timeout));
                 }
             }
@@ -192,28 +198,14 @@ impl ConcurrencyManager {
         };
 
         // Update metrics
-        self.metrics.acquisitions.fetch_add(1, Ordering::Relaxed);
-        let active = self.metrics.active.fetch_add(1, Ordering::Relaxed) + 1;
-
-        // Update peak
-        let mut peak = self.metrics.peak.load(Ordering::Relaxed);
-        while active > peak {
-            match self.metrics.peak.compare_exchange_weak(
-                peak,
-                active,
-                Ordering::Relaxed,
-                Ordering::Relaxed,
-            ) {
-                Ok(_) => break,
-                Err(p) => peak = p,
-            }
-        }
+        self.record_acquisition();
 
         Ok(ConcurrencyPermit {
             _global_permit: global_permit,
             _key_permit: key_permit,
             key: key_string,
             key_active: self.key_active.clone(),
+            metrics: self.metrics.clone(),
         })
     }
 
@@ -225,6 +217,7 @@ impl ConcurrencyManager {
             .clone()
             .try_acquire_owned()
             .map_err(|_| {
+                self.record_rejection();
                 ConcurrencyError::QueueFull(
                     self.config.global_limit - self.global_semaphore.available_permits(),
                 )
@@ -247,6 +240,7 @@ impl ConcurrencyManager {
                     (Some(k.to_string()), Some(permit))
                 }
                 Err(_) => {
+                    self.record_rejection();
                     return Err(ConcurrencyError::KeyLimitReached(k.to_string()));
                 }
             }
@@ -255,14 +249,14 @@ impl ConcurrencyManager {
         };
 
         // Update metrics
-        self.metrics.acquisitions.fetch_add(1, Ordering::Relaxed);
-        self.metrics.active.fetch_add(1, Ordering::Relaxed);
+        self.record_acquisition();
 
         Ok(ConcurrencyPermit {
             _global_permit: global_permit,
             _key_permit: key_permit,
             key: key_string,
             key_active: self.key_active.clone(),
+            metrics: self.metrics.clone(),
         })
     }
 
@@ -292,6 +286,50 @@ impl ConcurrencyManager {
                 .map(|c| c.load(Ordering::Relaxed) > 0)
                 .unwrap_or(false)
         });
+    }
+
+    fn record_acquisition(&self) {
+        self.metrics.acquisitions.fetch_add(1, Ordering::Relaxed);
+        let active = self.metrics.active.fetch_add(1, Ordering::Relaxed) + 1;
+        update_peak(&self.metrics.peak, active);
+    }
+
+    fn record_rejection(&self) {
+        self.metrics.rejections.fetch_add(1, Ordering::Relaxed);
+    }
+
+    fn record_timeout(&self) {
+        self.metrics.timeouts.fetch_add(1, Ordering::Relaxed);
+    }
+}
+
+fn update_peak(peak: &AtomicUsize, active: usize) {
+    let mut current_peak = peak.load(Ordering::Relaxed);
+    while active > current_peak {
+        match peak.compare_exchange_weak(
+            current_peak,
+            active,
+            Ordering::Relaxed,
+            Ordering::Relaxed,
+        ) {
+            Ok(_) => break,
+            Err(next_peak) => current_peak = next_peak,
+        }
+    }
+}
+
+fn decrement_active(active: &AtomicUsize) {
+    let mut current = active.load(Ordering::Relaxed);
+    while current > 0 {
+        match active.compare_exchange_weak(
+            current,
+            current - 1,
+            Ordering::Relaxed,
+            Ordering::Relaxed,
+        ) {
+            Ok(_) => break,
+            Err(next) => current = next,
+        }
     }
 }
 
