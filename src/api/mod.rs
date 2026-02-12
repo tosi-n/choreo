@@ -540,9 +540,7 @@ impl IntoResponse for AppError {
         let (status, message) = match &self.0 {
             ChoreoError::RunNotFound { .. }
             | ChoreoError::EventNotFound { .. }
-            | ChoreoError::StepNotFound { .. } => {
-                (StatusCode::NOT_FOUND, self.0.to_string())
-            }
+            | ChoreoError::StepNotFound { .. } => (StatusCode::NOT_FOUND, self.0.to_string()),
             ChoreoError::DuplicateIdempotencyKey { .. } => {
                 (StatusCode::CONFLICT, self.0.to_string())
             }
