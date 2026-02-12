@@ -3,7 +3,7 @@
 use choreo::concurrency::{
     ConcurrencyConfig, ConcurrencyError, ConcurrencyManager, ConcurrencyMetrics,
 };
-use std::sync::atomic::Ordering;
+use std::sync::Arc;
 use std::time::Duration;
 
 #[tokio::test]
@@ -135,18 +135,23 @@ async fn test_global_and_key_limits_combined() {
 
 #[tokio::test]
 async fn test_acquire_with_timeout_success() {
-    let manager = ConcurrencyManager::new(ConcurrencyConfig {
+    let manager = Arc::new(ConcurrencyManager::new(ConcurrencyConfig {
         global_limit: 1,
         queue_timeout: Duration::from_secs(5),
         ..Default::default()
-    });
+    }));
 
-    let _p1 = manager.try_acquire(None).unwrap();
+    let permit = manager.try_acquire(None).unwrap();
+    let release_task = tokio::spawn(async move {
+        tokio::time::sleep(Duration::from_millis(50)).await;
+        drop(permit);
+    });
 
     let result = manager
         .acquire_with_timeout(None, Duration::from_secs(1))
         .await;
     assert!(result.is_ok());
+    release_task.await.unwrap();
 }
 
 #[tokio::test]
@@ -157,12 +162,15 @@ async fn test_key_concurrency_different_keys() {
         ..Default::default()
     });
 
+    let mut permits = Vec::new();
     for i in 0..5 {
-        let _permit = manager.try_acquire(Some(&format!("user-{}", i))).unwrap();
+        let permit = manager.try_acquire(Some(&format!("user-{}", i))).unwrap();
+        permits.push(permit);
         assert_eq!(manager.key_active_count(&format!("user-{}", i)), 1);
     }
 
     assert!(manager.try_acquire(None).is_err());
+    drop(permits);
 }
 
 #[tokio::test]
@@ -215,7 +223,7 @@ async fn test_acquire_no_key() {
         ..Default::default()
     });
 
-    let permit = manager.try_acquire(None).unwrap();
+    let _permit = manager.try_acquire(None).unwrap();
     assert_eq!(manager.available_permits(), 4);
 }
 
@@ -267,7 +275,7 @@ async fn test_permit_lifecycle() {
     drop(p2);
 
     let metrics_after = manager.metrics();
-    assert!(metrics_after.active <= 1);
+    assert_eq!(metrics_after.active, 0);
 }
 
 #[tokio::test]
