@@ -371,6 +371,11 @@ async fn get_run_steps<S: StateStore>(
     State(state): State<Arc<AppState<S>>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Vec<StepResponse>>, AppError> {
+    state
+        .store
+        .get_run(id)
+        .await?
+        .ok_or(ChoreoError::RunNotFound { id })?;
     let steps = state.store.get_steps_for_run(id).await?;
     Ok(Json(steps.into_iter().map(Into::into).collect()))
 }
@@ -463,14 +468,20 @@ async fn save_step<S: StateStore>(
 ) -> Result<Json<StepResponse>, AppError> {
     state
         .store
+        .get_run(run_id)
+        .await?
+        .ok_or(ChoreoError::RunNotFound { id: run_id })?;
+
+    state
+        .store
         .complete_step(run_id, &step_id, req.output)
         .await?;
 
     // Get the updated step
-    let steps = state.store.get_steps_for_run(run_id).await?;
-    let step = steps
-        .into_iter()
-        .find(|s| s.step_id == step_id)
+    let step = state
+        .store
+        .get_step(run_id, &step_id)
+        .await?
         .ok_or(ChoreoError::StepNotFound { run_id, step_id })?;
 
     Ok(Json(step.into()))
@@ -527,7 +538,9 @@ impl From<serde_json::Error> for AppError {
 impl IntoResponse for AppError {
     fn into_response(self) -> axum::response::Response {
         let (status, message) = match &self.0 {
-            ChoreoError::RunNotFound { .. } | ChoreoError::EventNotFound { .. } => {
+            ChoreoError::RunNotFound { .. }
+            | ChoreoError::EventNotFound { .. }
+            | ChoreoError::StepNotFound { .. } => {
                 (StatusCode::NOT_FOUND, self.0.to_string())
             }
             ChoreoError::DuplicateIdempotencyKey { .. } => {
