@@ -568,17 +568,22 @@ impl StateStore for SqliteStore {
         step_id: &str,
         output: serde_json::Value,
     ) -> Result<()> {
+        let now = Utc::now().to_rfc3339();
         sqlx::query(
             r#"
-            UPDATE step_runs
-            SET status = 'completed', output = ?, ended_at = ?
-            WHERE run_id = ? AND step_id = ?
+            INSERT INTO step_runs (id, run_id, step_id, status, output, started_at, ended_at)
+            VALUES (lower(hex(randomblob(16))), ?, ?, 'completed', ?, ?, ?)
+            ON CONFLICT (run_id, step_id) DO UPDATE SET
+                status = 'completed',
+                output = excluded.output,
+                ended_at = excluded.ended_at
             "#,
         )
-        .bind(serde_json::to_string(&output).unwrap_or_default())
-        .bind(Utc::now().to_rfc3339())
         .bind(run_id.to_string())
         .bind(step_id)
+        .bind(serde_json::to_string(&output).unwrap_or_default())
+        .bind(&now)
+        .bind(&now)
         .execute(&self.pool)
         .await?;
 
