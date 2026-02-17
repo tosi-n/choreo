@@ -23,7 +23,7 @@ from .runtime import RunExecutionResult, WorkerLeaseContext, WorkerLoopConfig, W
 from .run import FunctionRun, RunStatus
 from .step import StepContext, StepError
 
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 __all__ = [
     "Choreo",
     "ChoreoClient",
