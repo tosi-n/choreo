@@ -1,7 +1,7 @@
 //! REST API for Choreo
 
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
@@ -24,9 +24,10 @@ pub struct AppState<S: StateStore> {
 pub fn router<S: StateStore + Clone>(state: Arc<AppState<S>>) -> Router {
     Router::new()
         // Events
-        .route("/events", post(send_event::<S>))
+        .route("/events", post(send_event::<S>).get(list_events::<S>))
         .route("/events/:id", get(get_event::<S>))
         // Runs
+        .route("/runs", get(list_runs::<S>))
         .route("/runs/:id", get(get_run::<S>))
         .route("/runs/:id/cancel", post(cancel_run::<S>))
         .route("/runs/:id/complete", post(complete_run::<S>))
@@ -69,6 +70,34 @@ pub struct PaginationQuery {
 
 fn default_limit() -> i64 {
     50
+}
+
+fn normalize_limit(limit: i64) -> i64 {
+    limit.clamp(1, 500)
+}
+
+fn normalize_offset(offset: i64) -> i64 {
+    offset.max(0)
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ListEventsQuery {
+    #[serde(default = "default_limit")]
+    pub limit: i64,
+    #[serde(default)]
+    pub offset: i64,
+    pub name: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ListRunsQuery {
+    #[serde(default = "default_limit")]
+    pub limit: i64,
+    #[serde(default)]
+    pub offset: i64,
+    pub status: Option<String>,
+    pub function_id: Option<String>,
+    pub event_id: Option<Uuid>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -340,6 +369,55 @@ async fn get_event<S: StateStore>(
         .await?
         .ok_or(ChoreoError::EventNotFound { id })?;
     Ok(Json(event))
+}
+
+async fn list_events<S: StateStore>(
+    State(state): State<Arc<AppState<S>>>,
+    Query(query): Query<ListEventsQuery>,
+) -> Result<Json<Vec<EventResponse>>, AppError> {
+    let limit = normalize_limit(query.limit);
+    let offset = normalize_offset(query.offset);
+    let name = query
+        .name
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
+
+    let events = if let Some(name_filter) = name {
+        state
+            .store
+            .get_events_by_name(name_filter, limit, offset)
+            .await?
+    } else {
+        state.store.list_events(limit, offset).await?
+    };
+
+    Ok(Json(events.into_iter().map(Into::into).collect()))
+}
+
+async fn list_runs<S: StateStore>(
+    State(state): State<Arc<AppState<S>>>,
+    Query(query): Query<ListRunsQuery>,
+) -> Result<Json<Vec<RunResponse>>, AppError> {
+    let limit = normalize_limit(query.limit);
+    let offset = normalize_offset(query.offset);
+    let status = query
+        .status
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
+    let function_id = query
+        .function_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
+
+    let runs = state
+        .store
+        .list_runs(limit, offset, status, function_id, query.event_id)
+        .await?;
+
+    Ok(Json(runs.into_iter().map(Into::into).collect()))
 }
 
 async fn get_run<S: StateStore>(

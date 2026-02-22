@@ -475,3 +475,147 @@ async fn test_send_event_uses_function_retry_max_attempts() {
     let run_json: serde_json::Value = serde_json::from_slice(&run_body).unwrap();
     assert_eq!(run_json["max_attempts"], 7);
 }
+
+#[tokio::test]
+async fn test_list_events_and_runs_with_filters() {
+    let router = create_sqlite_test_router().await;
+
+    let register_body = json!({
+        "functions": [
+            {
+                "id": "order-processor",
+                "name": "Order Processor",
+                "triggers": [
+                    {"type": "event", "name": "order.created"}
+                ],
+                "retries": {"max_attempts": 3},
+                "timeout_secs": 300,
+                "concurrency": null,
+                "throttle": null,
+                "debounce": null,
+                "priority": 0
+            }
+        ]
+    });
+
+    let register_response = router
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/functions")
+                .method("POST")
+                .header("content-type", "application/json")
+                .body(Body::from(register_body.to_string()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(register_response.status(), StatusCode::OK);
+
+    let send_event_body = json!({
+        "name": "order.created",
+        "data": {"order_id": "ord_987"}
+    });
+
+    let send_response = router
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/events")
+                .method("POST")
+                .header("content-type", "application/json")
+                .body(Body::from(send_event_body.to_string()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(send_response.status(), StatusCode::OK);
+    let send_body = to_bytes(send_response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let send_json: serde_json::Value = serde_json::from_slice(&send_body).unwrap();
+    let event_id = send_json["event_id"].as_str().unwrap().to_string();
+    let run_id = send_json["run_ids"][0].as_str().unwrap().to_string();
+
+    let events_response = router
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/events?limit=10")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(events_response.status(), StatusCode::OK);
+    let events_body = to_bytes(events_response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let events_json: serde_json::Value = serde_json::from_slice(&events_body).unwrap();
+    assert!(events_json
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|event| event["id"] == event_id));
+
+    let filtered_events_response = router
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/events?name=order.created&limit=10")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(filtered_events_response.status(), StatusCode::OK);
+    let filtered_events_body = to_bytes(filtered_events_response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let filtered_events_json: serde_json::Value =
+        serde_json::from_slice(&filtered_events_body).unwrap();
+    assert_eq!(filtered_events_json.as_array().unwrap().len(), 1);
+
+    let runs_response = router
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/runs?limit=10")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(runs_response.status(), StatusCode::OK);
+    let runs_body = to_bytes(runs_response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let runs_json: serde_json::Value = serde_json::from_slice(&runs_body).unwrap();
+    assert!(runs_json
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|run| run["id"] == run_id));
+
+    let filtered_runs_response = router
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri(format!(
+                    "/runs?status=queued&function_id=order-processor&event_id={}&limit=10",
+                    event_id
+                ))
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(filtered_runs_response.status(), StatusCode::OK);
+    let filtered_runs_body = to_bytes(filtered_runs_response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    let filtered_runs_json: serde_json::Value =
+        serde_json::from_slice(&filtered_runs_body).unwrap();
+    assert_eq!(filtered_runs_json.as_array().unwrap().len(), 1);
+    assert_eq!(filtered_runs_json[0]["id"], run_id);
+}

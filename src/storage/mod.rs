@@ -53,6 +53,9 @@ pub trait StateStore: Send + Sync + 'static {
     /// Get events by name with pagination
     async fn get_events_by_name(&self, name: &str, limit: i64, offset: i64) -> Result<Vec<Event>>;
 
+    /// List events with pagination (newest first)
+    async fn list_events(&self, limit: i64, offset: i64) -> Result<Vec<Event>>;
+
     /// Check idempotency key and return existing event ID if found
     async fn check_idempotency_key(&self, key: &str) -> Result<Option<Uuid>>;
 
@@ -75,6 +78,16 @@ pub trait StateStore: Send + Sync + 'static {
         function_id: &str,
         limit: i64,
         offset: i64,
+    ) -> Result<Vec<FunctionRun>>;
+
+    /// List runs with optional filters and pagination (newest first)
+    async fn list_runs(
+        &self,
+        limit: i64,
+        offset: i64,
+        status: Option<&str>,
+        function_id: Option<&str>,
+        event_id: Option<Uuid>,
     ) -> Result<Vec<FunctionRun>>;
 
     /// Lease pending runs for execution (atomic operation)
@@ -287,14 +300,23 @@ impl StateStore for MemoryStore {
     }
 
     async fn get_events_by_name(&self, name: &str, limit: i64, offset: i64) -> Result<Vec<Event>> {
-        let all: Vec<Event> = self
+        let mut all: Vec<Event> = self
             .events
             .iter()
             .filter(|e| e.value().name == name)
             .map(|e| e.clone())
             .collect();
-        let offset = offset as usize;
-        let limit = limit as usize;
+        all.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+        let offset = offset.max(0) as usize;
+        let limit = limit.max(0) as usize;
+        Ok(all.into_iter().skip(offset).take(limit).collect())
+    }
+
+    async fn list_events(&self, limit: i64, offset: i64) -> Result<Vec<Event>> {
+        let mut all: Vec<Event> = self.events.iter().map(|e| e.clone()).collect();
+        all.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+        let offset = offset.max(0) as usize;
+        let limit = limit.max(0) as usize;
         Ok(all.into_iter().skip(offset).take(limit).collect())
     }
 
@@ -326,14 +348,42 @@ impl StateStore for MemoryStore {
         limit: i64,
         offset: i64,
     ) -> Result<Vec<FunctionRun>> {
-        let all: Vec<FunctionRun> = self
+        let mut all: Vec<FunctionRun> = self
             .runs
             .iter()
             .filter(|r| r.value().function_id == function_id)
             .map(|r| r.clone())
             .collect();
-        let offset = offset as usize;
-        let limit = limit as usize;
+        all.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+        let offset = offset.max(0) as usize;
+        let limit = limit.max(0) as usize;
+        Ok(all.into_iter().skip(offset).take(limit).collect())
+    }
+
+    async fn list_runs(
+        &self,
+        limit: i64,
+        offset: i64,
+        status: Option<&str>,
+        function_id: Option<&str>,
+        event_id: Option<Uuid>,
+    ) -> Result<Vec<FunctionRun>> {
+        let mut all: Vec<FunctionRun> = self.runs.iter().map(|r| r.clone()).collect();
+
+        if let Some(status_filter) = status {
+            all.retain(|r| r.status.as_str() == status_filter);
+        }
+        if let Some(function_filter) = function_id {
+            all.retain(|r| r.function_id == function_filter);
+        }
+        if let Some(event_filter) = event_id {
+            all.retain(|r| r.event_id == event_filter);
+        }
+
+        all.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+
+        let offset = offset.max(0) as usize;
+        let limit = limit.max(0) as usize;
         Ok(all.into_iter().skip(offset).take(limit).collect())
     }
 
