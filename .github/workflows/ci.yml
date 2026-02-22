@@ -58,7 +58,7 @@ jobs:
         run: cargo build --all-features
 
       - name: Install tarpaulin
-        run: cargo install cargo-tarpaulin --locked
+        run: cargo install cargo-tarpaulin --locked --force
 
       - name: Unit Tests (SQLite)
         run: cargo test --features sqlite --lib --bins -- --test-threads=4
