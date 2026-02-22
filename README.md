@@ -210,7 +210,9 @@ Works with managed databases:
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/events` | Send an event |
+| GET | `/events?limit=50&offset=0&name=order.created` | List events (optional `name` filter) |
 | GET | `/events/:id` | Get event details |
+| GET | `/runs?limit=50&offset=0&status=queued&function_id=foo&event_id=<uuid>` | List runs (optional filters) |
 | GET | `/runs/:id` | Get run status |
 | POST | `/runs/:id/cancel` | Cancel a run |
 | GET | `/health` | Health check |

@@ -140,6 +140,33 @@ impl StateStore for PostgresStore {
             .collect())
     }
 
+    async fn list_events(&self, limit: i64, offset: i64) -> Result<Vec<Event>> {
+        let rows = sqlx::query(
+            r#"
+            SELECT id, name, data, idempotency_key, timestamp, user_id
+            FROM events
+            ORDER BY timestamp DESC
+            LIMIT $1 OFFSET $2
+            "#,
+        )
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows
+            .into_iter()
+            .map(|r| Event {
+                id: r.get("id"),
+                name: r.get("name"),
+                data: r.get("data"),
+                idempotency_key: r.get("idempotency_key"),
+                timestamp: r.get("timestamp"),
+                user_id: r.get("user_id"),
+            })
+            .collect())
+    }
+
     async fn check_idempotency_key(&self, key: &str) -> Result<Option<Uuid>> {
         let row = sqlx::query_scalar::<_, Uuid>(
             "SELECT id FROM events WHERE idempotency_key = $1 LIMIT 1",
@@ -238,6 +265,38 @@ impl StateStore for PostgresStore {
             "#,
         )
         .bind(function_id)
+        .bind(limit)
+        .bind(offset)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows.iter().map(row_to_run).collect())
+    }
+
+    async fn list_runs(
+        &self,
+        limit: i64,
+        offset: i64,
+        status: Option<&str>,
+        function_id: Option<&str>,
+        event_id: Option<Uuid>,
+    ) -> Result<Vec<FunctionRun>> {
+        let rows = sqlx::query(
+            r#"
+            SELECT id, function_id, event_id, status, attempt, max_attempts,
+                   input, output, error, created_at, started_at, ended_at,
+                   locked_until, locked_by, concurrency_key, run_after
+            FROM function_runs
+            WHERE ($1::text IS NULL OR status = $1)
+              AND ($2::text IS NULL OR function_id = $2)
+              AND ($3::uuid IS NULL OR event_id = $3)
+            ORDER BY created_at DESC
+            LIMIT $4 OFFSET $5
+            "#,
+        )
+        .bind(status)
+        .bind(function_id)
+        .bind(event_id)
         .bind(limit)
         .bind(offset)
         .fetch_all(&self.pool)
